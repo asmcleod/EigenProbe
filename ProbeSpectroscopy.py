@@ -85,8 +85,8 @@ class ProbeSpectroscopy(PCE.SlenderizeSerialization):
 
         P = self.get_probe()
 
-        self._recorded_eigenrhos[x] = P.get_eigenrhos()
-        self._recorded_eigencharges[x] = P.get_eigencharges()
+        self._recorded_eigenrhos[x] = P._eigenrhos
+        self._recorded_eigencharges[x] = P._eigencharges
 
         Zself =P.get_self_impedance(recompute=False)
         self._recorded_self_impedances[x] = Zself
@@ -563,6 +563,7 @@ class ProbeSpectroscopyParallel(ProbeSpectroscopy):
         #--- Make sure probe impedances have already been computed
         # We don't know which ones will be recomputed across parallel iterations,
         # but we can make sure the complement is available
+        Probe = self.get_probe()
         ZSelf = Probe.get_self_impedance(k=Probe.get_k(), recompute=False)
         ZMirror = Probe.get_mirror_impedance(k=0, recompute=False)
 
@@ -578,7 +579,7 @@ class ProbeSpectroscopyParallel(ProbeSpectroscopy):
                     coords_sub = coords[nstart:nstop]
                     new_eigensets = parallel(delayed(eigenset_calculator)(Probe, coord, **kwargs) \
                                                                           for coord in coords_sub)
-                    Logger.write('\tParallel calculation retrieved %i results!'%ncpus)
+                    Logger.write('\tParallel calculation retrieved %i results!'%len(new_eigensets))
                     eigensets = eigensets + new_eigensets
                 Logger.write('\tTime elapsed: ', time.time() - t0)
             #Probe attributes are restored on `__exit__`
@@ -676,6 +677,7 @@ class ProbeGapSpectroscopyParallel(ProbeSpectroscopyParallel):
 
         #--- Hard-code the gap calculator
         kwargs['k'] = 0 #we insist on a quasistatic calculation, otherwise some features of this class become meaningless
+
         super().__init__(Probe, coords=gaps, eigenset_calculator=compute_eigenset_at_gap,
                          ncpus=ncpus, backend=backend, Nmodes=Nmodes, reversed=reversed,
                          sommerfeld=sommerfeld, **kwargs)
@@ -1255,7 +1257,7 @@ class InvertibleEigenfields(PCE.SlenderizeSerialization):
         self.Nmodes = self.Rs.shape[1]
         self.zs = self.Rs.axes[0]
 
-        self.Probe = GapSpec.Probe.get_name()
+        self.Probe = GapSpec.get_probe().get_name()
 
         self.build_poles_residues_interpolator(interpolation=interpolation,**kwargs)
 
@@ -1384,6 +1386,7 @@ class InvertibleEigenfields(PCE.SlenderizeSerialization):
         # This is what's necessary for fourier element
         # cos harmonic kernel, *2 for full period integration, *2 for coefficient
         wts *= 4 * np.cos(2 * np.pi * harmonic * ts)
+        wts -= np.mean(wts) # Ensure it is impossible to couple a large DC component of ntegrand into demodulation result
         zs = zmin + amplitude * (1 + np.cos(2 * np.pi * ts))
 
         self.zs = zs

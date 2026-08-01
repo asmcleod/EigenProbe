@@ -16,7 +16,7 @@ import ProbeCavityEigenfields as PCE
 from ProbeCavityEigenfields import ProbeSpectroscopy as PS
 
 # Everyone will share this definition of qp corresponding to zero 2D conductivity
-qpmax=1e30*(1+1j)
+qpmax=1e50*(1+1j)
 
 class EncodedEigenfieldsPredictor(PCE.SlenderizeSerialization):
     """Simple predictor callable as `Predictor(qp,eps)` that will delivery a normalized signal
@@ -280,8 +280,11 @@ class LayeredMediaEncodedEigenfieldsPredictor(PCE.SlenderizeSerialization):
 
     def qp_to_eps_thin_film(self, qp):
 
-        tnorm = self.thickness_nm * self.from_nm # Thickness in Probe units
-        eps_excess = -2 / (qp * tnorm)
+        # Assume qp comes in units of wavenumbers
+        # (rp wrapped will take inputs as wavenumbers)
+
+        t_cm = self.thickness_nm*1e-7
+        eps_excess = -2 / (qp * t_cm)
         eps_thin_film = 1 + eps_excess
 
         return eps_thin_film
@@ -366,10 +369,8 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
         self.set_fine_params_eps(Nosc_eps * 3, amp=amp_eps)
         self.set_fine_params_qp(Nosc_eps * 3, amp=amp_qp)
 
-        self.qp_signal_mult = None
-        self.qp_signal_phase_factor = None
-        self.eps_signal_mult = None
-        self.eps_signal_phase_factor = None
+        self.signal_mult = None
+        self.signal_phase_factor = None
 
         self.optimize_target = 'eps_coarse'
         self.optimize_target_options = ['eps_coarse',
@@ -425,7 +426,14 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
 
         return osc
 
-    def set_fine_params_qp(self, Nosc, amp=0,freqs=None):
+    def set_qp_faddeeva_basis(self,):
+
+        print('Recomputing basis of fine oscillators for qp...')
+        self.qp_faddeeva_basis = [self.faddeeva_oscillator((1,f0,gamma),freqs=self.freqs) \
+                                    for f0,gamma in zip(self.qp_fine_freqs,
+                                                   self.qp_fine_gammas)]
+
+    def set_fine_params_qp(self, Nosc, amp=0):
 
         self.qp_fine_amps = list(amp / (1 + np.arange(Nosc)))  # First will be offset
         df = np.max(self.freqs) - np.min(self.freqs)
@@ -434,9 +442,14 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
         self.qp_fine_freqs = np.linspace(np.min(self.freqs),
                                          np.max(self.freqs),
                                          Nosc)
-        self.qp_faddeeva_basis = [self.faddeeva_oscillator((1,f0,gamma),freqs=freqs) \
-                                    for f0,gamma in zip(self.qp_fine_freqs,
-                                                   self.qp_fine_gammas)]
+        self.set_qp_faddeeva_basis()
+
+    def set_eps_faddeeva_basis(self):
+
+        print('Recomputing basis of fine oscillators for permittivity...')
+        self.eps_faddeeva_basis = [self.faddeeva_oscillator((1, f0, gamma)) \
+                                   for f0, gamma in zip(self.eps_fine_freqs,
+                                                        self.eps_fine_gammas)]
 
     def set_fine_params_eps(self, Nosc, amp=0):
 
@@ -448,20 +461,18 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
         self.eps_fine_freqs = np.linspace(np.min(self.freqs),
                                           np.max(self.freqs),
                                           Nosc)
-        self.eps_faddeeva_basis = [self.faddeeva_oscillator((1,f0,gamma)) \
-                                    for f0,gamma in zip(self.eps_fine_freqs,
-                                                   self.eps_fine_gammas)]
+        self.set_eps_faddeeva_basis()
 
     param_names = ['eps_vals',
                     'eps_coarse_params',
                    'eps_fine_amps',
-                   'eps_signal_mult',
-                   'eps_signal_phase_factor',
+                   'eps_fine_freqs',
+                   'eps_fine_gammas',
                    'qp_vals',
                    'qp_coarse_params',
                    'qp_fine_amps',
-                   'qp_signal_mult',
-                   'qp_signal_phase_factor']
+                   'signal_mult',
+                   'signal_phase_factor']
 
     def get_params(self):
 
@@ -490,9 +501,21 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
 
         return all_osc
 
+    def interp(self,spectrum,freqs):
+
+        if not hasattr(spectrum,'__len__'): return spectrum
+        assert len(spectrum)==len(self.freqs)
+        if freqs is None or np.array_equal(freqs,self.freqs): return spectrum
+
+        spectrum = AWA(spectrum,axes=[self.freqs])
+        spectrum_interp = spectrum.interpolate_axis(freqs,axis=0,extrapolate=True,bounds_error=False,kind='cubic')
+
+        return np.array(spectrum_interp)
+
     def get_qps(self,freqs=None):
 
-        if self.qp_vals is not None: return self.qp_vals
+        if self.qp_vals is not None:
+            return self.interp(self.qp_vals,freqs)
 
         # Take offset from first of coarse parameters
         params_coarse = copy.copy(list(self.qp_coarse_params))
@@ -501,27 +524,15 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
         excess_eps2D = np.abs(excess_eps2Dr) + 1j * np.abs(excess_eps2Di) # Enforce positive imaginary part of permittivity
 
         # Coarse oscillators
-        excess_eps2D += self.oscillators(params_coarse,freqs=freqs)
+        excess_eps2D += self.oscillators(params_coarse,freqs)
 
-        # Check that fine oscillators are properly calculated
-        if len(self.qp_faddeeva_basis) and len(self.qp_faddeeva_basis[0]) != len(self.freqs):
-            print('Re-evaluating fine oscillators for `qp` to match internal `freqs`.')
-            self.qp_faddeeva_basis = [self.faddeeva_oscillator((1, f0, gamma), freqs=self.freqs) \
-                                          for f0, gamma in zip(self.qp_fine_freqs,
-                                                               self.qp_fine_gammas)]
-
-        # Fine oscillators (all fixed freq and gamma)
-        if freqs is not None and not np.array_equal(freqs,self.freqs):
-            print('Re-evaluating fine oscillators for `qp` to match user-supplied `freqs`.')
-            qp_faddeeva_basis = [self.faddeeva_oscillator((1, f0, gamma), freqs=freqs) \
-                                      for f0, gamma in zip(self.qp_fine_freqs,
-                                                           self.qp_fine_gammas)]
-        else: qp_faddeeva_basis = self.qp_faddeeva_basis
-
+        # Fine oscillators
+        if len(self.qp_faddeeva_basis)!=len(self.qp_fine_amps):
+            self.set_qp_faddeeva_basis()
         eps2D_faddeeva = np.sum([amp*fad for amp,fad \
-                               in zip(self.qp_fine_amps,qp_faddeeva_basis)],
+                               in zip(self.qp_fine_amps,self.qp_faddeeva_basis)],
                               axis=0)
-        excess_eps2D += eps2D_faddeeva
+        excess_eps2D +=  self.interp(eps2D_faddeeva,freqs)
 
         excess_eps2D = excess_eps2D.real + 1j * np.abs(excess_eps2D.imag) # Enforce positive imaginary part of permittivity
 
@@ -529,14 +540,15 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
         
         # Replace any infinities with maximum value
         global qpmax
-        qps = np.where(np.isinf(qps),\
+        qps = np.where(np.isinf(qps),
                        qpmax,qps)
 
         return qps
 
     def get_epss(self,freqs=None):
 
-        if self.eps_vals is not None: return self.eps_vals
+        if self.eps_vals is not None:
+            return self.interp(self.eps_vals,freqs)
 
         # Take offset from first of coarse parameters
         params_coarse = copy.copy(list(self.eps_coarse_params))
@@ -547,22 +559,18 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
         # Coarse oscillators
         eps += self.oscillators(params_coarse,freqs)
 
-        # If we have no fine oscillators, we're done
-        if not len(self.eps_fine_amps): return eps.real + 1j * np.abs(eps.imag)
-
-        # Recompute fine basis if needed
-        if freqs is None: freqs=self.freqs
-        if not len(self.eps_faddeeva_basis) or len(self.eps_faddeeva_basis[0]) != len(freqs):
-            self.eps_faddeeva_basis = [self.faddeeva_oscillator((1, f0, gamma), freqs=freqs) \
-                                       for f0, gamma in zip(self.eps_fine_freqs,
-                                                            self.eps_fine_gammas)]
-
+        # Fine oscillators
+        if len(self.eps_faddeeva_basis)!=len(self.eps_fine_amps):
+            self.set_eps_faddeeva_basis()
         eps_faddeeva = np.sum([amp * fad for amp, fad \
                                in zip(self.eps_fine_amps, self.eps_faddeeva_basis)],
                               axis=0)
-        eps += eps_faddeeva
+        eps += self.interp(eps_faddeeva,freqs)
 
-        return eps.real + 1j * np.abs(eps.imag) # Enforce positive imaginary part of permittivity
+        # Enforce positive imaginary part of permittivity
+        eps = eps.real + 1j * np.abs(eps.imag)
+
+        return eps
 
     def fix_qps(self):
         self.qp_vals = self.get_qps()
@@ -576,20 +584,17 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
     def unfix_epss(self):
         self.eps_vals = None
 
-    def rescale_signal(self, signal, delta_S=.1, delta_phase=.2, qps_enabled=False):
+    def rescale_signal(self, signal, delta_S=.5, delta_phase=np.pi, qps_enabled=False):
 
         scaler = lambda x,A:  A*np.tanh(x) # can range from 1-A to 1+A
 
         # map the interval [-infty,infty] to [min,infty]
         # while mapping 1 to 1
         signal_mult_actual = 1
-        if qps_enabled:
-            x,y = self.qp_signal_mult, self.qp_signal_phase_factor
-        else:
-            x, y = self.eps_signal_mult, self.eps_signal_phase_factor
+        x, y = self.signal_mult, self.signal_phase_factor
 
         if x is not None:
-            scaling = 1+scaler(x,A=delta_S)
+            scaling = 1+scaler(x-1,A=delta_S)
             signal_mult_actual = signal_mult_actual * scaling
         if y is not None:
             dPhi = scaler(y,A=delta_phase)
@@ -671,26 +676,16 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
 
         self.correct_coarse_params_lists()
         params = list(params)
+        #print(params)
 
         # Handle the bonus params first
-        if 'eps_qp' in self.optimize_target: pass # If we're optimizing both, too complicated to use both mult and phase factors
-
-        elif 'eps' in self.optimize_target:
-            # print(self.eps_coarse_params)
-            if self.eps_signal_mult is not None:
-                # print('Received an optimized `signal_mult_eps` of %1.2G.' % self.eps_signal_mult)
-                self.eps_signal_mult = params.pop(-1)
-            if self.eps_signal_phase_factor is not None:
-                # print('Received an optimized `signal_phase_factor_eps` of %1.2G.' % self.eps_signal_phase_factor)
-                self.eps_signal_phase_factor = params.pop(-1)
-
-        elif 'qp' in self.optimize_target:
-            if self.qp_signal_mult is not None:
-                #print('Received an optimized `signal_mult_qp` of %1.2G.' % self.qp_signal_mult)
-                self.qp_signal_mult = params.pop(-1)
-            if self.qp_signal_phase_factor is not None:
-                #print('Received an optimized `signal_phase_factor_qp` of %1.2G.' % self.qp_signal_phase_factor)
-                self.qp_signal_phase_factor = params.pop(-1)
+        # Expected order of coarse parameters: [regular coarse parameters, phase factor, mult factor]
+        if self.signal_mult is not None:
+            #print('Received an optimized `signal_mult_eps` of %1.2G.' % self.eps_signal_mult)
+            self.signal_mult = params.pop(-1)
+        if self.signal_phase_factor is not None:
+            # print('Received an optimized `signal_phase_factor_eps` of %1.2G.' % self.eps_signal_phase_factor)
+            self.signal_phase_factor = params.pop(-1)
 
         # Now unpack the regular params
         if self.optimize_target == 'eps_coarse':
@@ -739,25 +734,34 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
                              % self.optimize_target_options)
 
         # Add the bonus parameters last
-        if 'eps_qp' in self.optimize_target: pass # If we're optimizing both, too complicated to use both mult and phase factors
-
-        elif 'eps' in self.optimize_target:
-            if self.eps_signal_phase_factor is not None:
-                print('Optimizing `eps_signal_phase_factor` starting with value %1.2G.' % self.eps_signal_phase_factor)
-                params.append(self.eps_signal_phase_factor)
-            if self.eps_signal_mult is not None:
-                print('Optimizing `eps_signal_mult` starting with value %1.2G.' % self.eps_signal_mult)
-                params.append(self.eps_signal_mult)
-
-        elif 'qp' in self.optimize_target:
-            if self.qp_signal_phase_factor is not None:
-                print('Optimizing `qp_signal_phase_factor` starting with value %1.2G.' % self.qp_signal_phase_factor)
-                params.append(self.qp_signal_phase_factor)
-            if self.qp_signal_mult is not None:
-                print('Optimizing `qp_signal_mult` starting with value %1.2G.' % self.qp_signal_mult)
-                params.append(self.qp_signal_mult)
+        # Expected order of coarse parameters: [regular coarse parameters, phase factor, mult factor]
+        if self.signal_phase_factor is not None:
+            print('Optimizing `signal_phase_factor` starting with value %1.2G.' % self.signal_phase_factor)
+            params.append(self.signal_phase_factor)
+        if self.signal_mult is not None:
+            print('Optimizing `signal_mult` starting with value %1.2G.' % self.signal_mult)
+            params.append(self.signal_mult)
 
         return params
+
+    def compute_residual(self,S_targets, S_targets_std=None, weights=None,
+                         exp=0.5):
+
+        S_targets = np.array(S_targets)  # Make array type, so there is no AWA nonsense to slow us down
+        S_targets_r = S_targets.real
+        S_targets_i = S_targets.imag
+
+        if S_targets_std is None:
+            S_targets_std = 1
+        else:
+            S_targets_std = np.abs(S_targets_std)
+        if hasattr(S_targets_std, '__len__'):
+            S_targets_std = np.array(S_targets_std)  # Make array type, so there is no AWA nonsense to slow us down
+
+        params0 = self.detach_params()
+        _ = self.residual(params0, S_targets_r, S_targets_i,
+                          S_targets_std, weights=weights, exp=exp)  # Just to compute `self.R`
+        return self.R
 
     def optimize(self, S_targets, S_targets_std=None, weights=None,
                  exp_start=0.5, exp_stop=2,
@@ -840,7 +844,6 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
 
     def optimize_eps_coarse(self, *args, **kwargs):
 
-        self.fix_qps()
         self.unfix_epss()
         self.optimize_target = 'eps_coarse'
         result = self.optimize(*args, **kwargs)
@@ -849,7 +852,6 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
 
     def optimize_qp_coarse(self, *args, **kwargs):
 
-        self.fix_epss()
         self.unfix_qps()
         self.optimize_target = 'qp_coarse'
         result = self.optimize(*args, **kwargs)
@@ -867,7 +869,6 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
 
     def optimize_eps_fine(self, *args, **kwargs):
 
-        self.fix_qps()
         self.unfix_epss()
         self.optimize_target = 'eps_fine'
         result = self.optimize(*args, **kwargs)
@@ -876,7 +877,6 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
 
     def optimize_qp_fine(self, *args, **kwargs):
 
-        self.fix_epss()
         self.unfix_qps()
         self.optimize_target = 'qp_fine'
         result = self.optimize(*args, **kwargs)
@@ -901,6 +901,61 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
 
         return deps, dqp
 
+class VariationalConductivity2D(VariationalMaterial2D):
+    """
+    First two coarse parameters represent offset from high-frequency permittivity.
+
+    First oscillator will be interpreted as a Drude in the permittivity.
+
+    Unlike  `VariationalMaterial2D`, subsequent oscillators will be interpreted
+    as oscillators in conductivity rather than in permittivity.
+
+    Furthermore, these conductivity oscillators have their FWHM saturate to that
+    of the Drude oscillator, which is assumed to represent scattering rate."""
+
+    def get_qps(self, freqs=None):
+
+        if self.qp_vals is not None:
+            return self.interp(self.qp_vals, freqs)
+        if freqs is None: freqs=self.freqs
+
+        params_coarse = list(copy.copy(self.qp_coarse_params))
+        er = params_coarse.pop(0)
+        ei = params_coarse.pop(0)
+        excess_eps2D = er + 1j * np.abs(ei) # Offsets for permittivity
+
+        drude_params = params_coarse[:3]
+        g_drude = drude_params[2]
+        excess_eps2D += self.oscillators(drude_params, freqs)
+
+        Nosc = len(params_coarse) // 3 - 1
+        for j in range(Nosc):
+            osc_params = params_coarse[3 * (j + 1):3 * (j + 2)]
+            g = osc_params[2]
+            osc_params[2] = np.sqrt(g ** 2 + (g_drude / 2) ** 2)  # Make sure FWHM is not less than Drude scattering rate
+
+            # Bear in mind, for permittivity, the effect of each of these oscillators will diverge at low frequency.
+            # We could temper this by making the denominator `freqs+1j*g`.
+            excess_eps2D += self.oscillators(osc_params, freqs)/freqs # An oscillator in conductivity has this form in permittivity
+
+        eps2D_faddeeva = np.sum([amp * fad for amp, fad \
+                                 in zip(self.qp_fine_amps, self.qp_faddeeva_basis)],
+                                axis=0)
+        excess_eps2D += self.interp(eps2D_faddeeva, freqs)
+
+        excess_eps2D = excess_eps2D.real + 1j * np.abs(excess_eps2D.imag)  # Enforce positive imaginary part of permittivity
+
+        qps = 1 / -excess_eps2D  # If excess_eps2D==0, then qp will diverge (no polariton)
+
+        # Replace any infinities with maximum value
+        global qpmax
+        qps = np.where(np.isinf(qps), \
+                       qpmax, qps)
+
+        return qps
+
+OscBroadenedVariationalMaterial2D = VariationalConductivity2D # A legacy alias
+
 class VariationalGraphene(VariationalMaterial2D):
 
     def get_qps(self, freqs=None):
@@ -909,9 +964,10 @@ class VariationalGraphene(VariationalMaterial2D):
 
         # Take offset from first of coarse parameters
         params_coarse = copy.copy(list(self.qp_coarse_params))
-        excess_eps2D_r = params_coarse.pop(0)
-        excess_eps2D_i = params_coarse.pop(0)
-        excess_eps2D = excess_eps2D_r + 1j * np.abs(excess_eps2D_i)  # Enforce positive imaginary part of permittivity
+        neg_qpinv_r = params_coarse.pop(0)
+        neg_qpinv_i = params_coarse.pop(0)
+        # This negative inverse qp is like the permittivity
+        neg_qpinv = neg_qpinv_r + 1j * np.abs(neg_qpinv_i)  # Enforce positive imaginary part of permittivity
         # excess_eps2D = 0
 
         # Add Drude + step function
@@ -924,23 +980,39 @@ class VariationalGraphene(VariationalMaterial2D):
         if freqs is None: freqs=self.freqs
         zeta_bar = (freqs + 1j * gamma) / mu
         f = (1 / zeta_bar - 1 / 4. * np.log((2. + zeta_bar) / (2. - zeta_bar)))
-        # For graphene, we expect `amp` to be a quantum of conductance, `sigma0 = 1/137 * c/4`
+        # For single layer graphene, we expect `amp` to be the quantum of conductance, `sigma0 = 1/137 * c/4`
         sigma = 1j * (4/np.pi) * f * amp # The logarithm tends towards pi, so multiply by 4/pi; now `amp` could be quantum of conductance
         self.sigma = sigma
 
-        excess_eps2D += 4 * np.pi * 1j * sigma / (2*np.pi * freqs) # Scale factors actually don't matter, qp will scale to whatever best fits data
-        excess_eps2D += self.oscillators(params_coarse[3:], freqs)
-        # Fine oscillators (all fixed freq and gamma)
-        eps2D_faddeeva = np.sum([amp * fad for amp, fad \
+        # Use the relation `sigma = 1j*f*c/qp`
+        c=3e10
+        neg_qpinv -= sigma/(1j*freqs*c)
+        self.oscillators(params_coarse[3:],
+                         freqs)  # Add oscillators to permittivity rather than conductivity, so that we don't need to change their factor by "1j"
+        qpinv_faddeeva = np.sum([amp * fad for amp, fad \
                                  in zip(self.qp_fine_amps, self.qp_faddeeva_basis)],
                                 axis=0)
         try:
-            excess_eps2D += eps2D_faddeeva
+            neg_qpinv += qpinv_faddeeva
         except ValueError:
             print('Fine oscillators for `qp` are mismatched to `freqs` and should be recalculated.')
-        excess_eps2D = excess_eps2D.real + 1j * np.abs(excess_eps2D.imag)  # Enforce positive imaginary part of permittivity
+        neg_qpinv = neg_qpinv.real + 1j * np.abs(neg_qpinv.imag)  # Enforce positive imaginary part of permittivity
 
-        qps = 1 / -excess_eps2D  # If excess_eps2D==0, then qp will diverge (no polariton)
+        qps = -1/neg_qpinv
+
+        #excess_eps2D += 4 * np.pi * 1j * sigma / (2*np.pi * freqs) # Effective 2D permittivity
+        #excess_eps2D += self.oscillators(params_coarse[3:], freqs) # Add oscillators to permittivity rather than conductivity, so that we don't need to change their factor by "1j"
+        # Fine oscillators (all fixed freq and gamma)
+        #eps2D_faddeeva = np.sum([amp * fad for amp, fad \
+        #                         in zip(self.qp_fine_amps, self.qp_faddeeva_basis)],
+        #                        axis=0)
+        #try:
+        #    excess_eps2D += eps2D_faddeeva
+        #except ValueError:
+        #    print('Fine oscillators for `qp` are mismatched to `freqs` and should be recalculated.')
+        #excess_eps2D = excess_eps2D.real + 1j * np.abs(excess_eps2D.imag)  # Enforce positive imaginary part of permittivity
+
+        #qps = 1 / -excess_eps2D  # If excess_eps2D==0, then qp will diverge (no polariton)
 
         # Replace any infinities with maximum value
         global qpmax
@@ -1064,6 +1136,7 @@ def Fit_epss_to_oscillators(eps_target, target_fs,
                             MaterialModel, exp=1,
                             reset_MaterialModel=True,
                             Nosc=None, amp=None, eps0=None,
+                            plot=True,
                             **leastsq_kwargs):
     # Define the residual function for this oscillator
     def oscillator_eps_residual(args,
@@ -1093,15 +1166,16 @@ def Fit_epss_to_oscillators(eps_target, target_fs,
     to_minimize = oscillator_eps_residual(x0, *args)
     print('Residual before fitting:', np.sum(to_minimize))
 
-    plt.figure()
     eps_smooth = MaterialModel.get_epss()
-    plt.plot(target_fs, np.array(eps_target).real, ls='--', label='point-by-point target', color='b')
-    plt.plot(target_fs, np.array(eps_target).imag, ls='--', color='r')
-    plt.plot(target_fs, np.array(eps_smooth).real, ls='-', label='smooth fit', color='b')
-    plt.plot(target_fs, np.array(eps_smooth).imag, ls='-', color='r')
-    plt.legend()
-    plt.title('Permittivities before fitting')
-    plt.xlabel(r'Frequency (cm$^{-1}$)')
+    if plot:
+        plt.figure()
+        plt.plot(target_fs, np.array(eps_target).real, ls='--', label='point-by-point target', color='b')
+        plt.plot(target_fs, np.array(eps_target).imag, ls='--', color='r')
+        plt.plot(target_fs, np.array(eps_smooth).real, ls='-', label='smooth fit', color='b')
+        plt.plot(target_fs, np.array(eps_smooth).imag, ls='-', color='r')
+        plt.legend()
+        plt.title('Permittivities before fitting')
+        plt.xlabel(r'Frequency (cm$^{-1}$)')
 
     t0 = time.time()
     result = leastsq(oscillator_eps_residual, x0, args=(eps_target.real, eps_target.imag, \
@@ -1116,15 +1190,16 @@ def Fit_epss_to_oscillators(eps_target, target_fs,
     to_minimize = oscillator_eps_residual(x0, *args)
     print('Residual after fitting:', np.sum(to_minimize))
 
-    plt.figure()
-    eps_smooth = MaterialModel.get_epss()
-    plt.plot(target_fs, np.array(eps_target).real, ls='--', label='point-by-point target', color='b')
-    plt.plot(target_fs, np.array(eps_target).imag, ls='--', color='r')
-    plt.plot(target_fs, np.array(eps_smooth).real, ls='-', label='smooth fit', color='b')
-    plt.plot(target_fs, np.array(eps_smooth).imag, ls='-', color='r')
-    plt.legend()
-    plt.title('Permittivities after fitting')
-    plt.xlabel(r'Frequency (cm$^{-1}$)')
+    if plot:
+        plt.figure()
+        eps_smooth = MaterialModel.get_epss()
+        plt.plot(target_fs, np.array(eps_target).real, ls='--', label='point-by-point target', color='b')
+        plt.plot(target_fs, np.array(eps_target).imag, ls='--', color='r')
+        plt.plot(target_fs, np.array(eps_smooth).real, ls='-', label='smooth fit', color='b')
+        plt.plot(target_fs, np.array(eps_smooth).imag, ls='-', color='r')
+        plt.legend()
+        plt.title('Permittivities after fitting')
+        plt.xlabel(r'Frequency (cm$^{-1}$)')
 
     return eps_smooth
 
@@ -1342,9 +1417,9 @@ def Fit_qps_to_oscillators(qp_target, target_fs,
     print('Residual after fitting:', np.sum(to_minimize))
 
     # Plot Fit after fitting
+    qp_smooth = MaterialModel.get_qps()
     if plot:
         plt.figure()
-        qp_smooth = MaterialModel.get_qps()
         eps2D_target = -1 / qp_target
         plt.plot(target_fs, eps2D_target.real, ls='--', label='point-by-point target', color='b')
         plt.fill_between(target_fs,

@@ -135,7 +135,7 @@ class Efield_generator(object):
     
         return Er,Ez
     
-def demodulate(signal_AWA,demod_order=5,quadrature=numrec.GL,Nts=None,verbose=False):
+def demodulate(signal_AWA,demod_order=5,quadrature=numrec.GL,Nts=None,verbose=False,interpolation='quadratic'):
     "Demodulate `signal_AWA` along its first axis."
 
     global signal_vs_z
@@ -147,7 +147,7 @@ def demodulate(signal_AWA,demod_order=5,quadrature=numrec.GL,Nts=None,verbose=Fa
     if verbose: Logger.write('Demodulating across A=%1.2G with Nt=%i...'%(A,Nts))
     ts,dts=numrec.GetQuadrature(N=Nts,xmin=-.5,xmax=0,quadrature=quadrature)
     zs_sweep = zs.min() + A*(1+np.cos(2*np.pi*ts)) # positions low to high; if zs were CC quadrature, then these are the same z-values but reordered
-    signal_vs_t=signal_AWA.interpolate_axis(zs_sweep,bounds_error=False,extrapolate=True,axis=0,kind='quadratic')
+    signal_vs_t=signal_AWA.interpolate_axis(zs_sweep,bounds_error=False,extrapolate=True,axis=0,kind=interpolation)
 
     Sns=[]
     harmonics=np.arange(demod_order+1)
@@ -254,20 +254,13 @@ class Probe(object):
     
     def __init__(self,zs=None,rs=None,
                  Nnodes=244,L=None,quadrature=numrec.GL,
-                 a=None,taper_angle=20,geometry='hyperboloid',Rtop=0,\
+                 a=None,taper_angle=20,geometry='hyperboloid',Rtop=0,
                  freq=None,gap=None,Nsubnodes=2,closed=False,
                  name=None,**kwargs):
 
         self.set_name(name)
         Logger.write('Generating probe "%s"...'%self.get_name())
-
-        ## Set up defaults
-        self.defaults = {'freq': 30e-7 / 10e-4,
-                            'a': 1,
-                            'gap': 1,
-                            'L': 19e-4 / 30e-7,
-                            'illum_angles': np.linspace(45, 90, 20),
-                             'excitation':EPlaneWaveFF}
+        self.verbose=False
         
         if a is None: a=self.defaults['a']
         if L is None: L=self.defaults['L']
@@ -313,6 +306,7 @@ class Probe(object):
         except: return None
 
     def set_name(self,name=None,overwrite=False):
+        """ The `overwrite` flag is delivered to `ProbesCollection`."""
 
         # If no name is provided, keep existing one (which may itself be `None`)
         if name is None: name = self.get_name()
@@ -320,12 +314,19 @@ class Probe(object):
         if name is None: name = ProbesCollection.generate_name()
 
         # Re-register probe if overwriting, or if not existent in collection
-        if name not in ProbesCollection: ProbesCollection[name] = self
-        elif overwrite: # Overwrite if called for (the default when using `__setstate__`)
-            overwrite_prev_set = ProbesCollection.overwrite()
-            ProbesCollection.overwrite(True)
+        try:
+            if overwrite: # Overwrite if called for (the default when using `__setstate__`)
+                overwrite_prev_set = ProbesCollection.overwrite()
+                ProbesCollection.overwrite(True)
             ProbesCollection[name] = self
-            ProbesCollection.overwrite(overwrite_prev_set)
+            if overwrite:
+                ProbesCollection.overwrite(overwrite_prev_set)
+
+        except ValueError as e:
+            msg = 'Could not add probe to `ProbesCollection.` \n'
+            msg += e.args[0]
+            msg += '\nYou may avert this error by passing keyword `overwrite=True` to `load`!'
+            print(msg)
 
         self._name = name
 
@@ -401,7 +402,7 @@ class Probe(object):
 
     def get_kappa_max(self):
 
-        kappa_a = 1/self.get_a()
+        kappa_a = 10/self.get_a()
 
         return kappa_a * self._kappa_max_factor
     
@@ -1160,9 +1161,13 @@ class Probe(object):
                   farfield=False,
                   rp=None, recompute_rp=True,
                   recompute_propagators=True,
-                  recompute_brightness=True,
+                  recompute_brightness=False,
                   subtract_background=True,
                   **kwargs):
+
+        self.simulation_metadata=dict(gapmin=gapmin,gapmax=gapmax,
+                                 Ngaps=Ngaps,Nmodes=Nmodes)
+        self.simulation_metadata.update(kwargs)
         
         #--- Get initial mode amplitudes
         Nmodes=np.min((self.get_Nmodes(),\
@@ -1180,22 +1185,26 @@ class Probe(object):
         #If we have an angle axis, sum it like an integral (axis=0)
         if Vn.ndim==2: Vn = np.sum(Vn,axis=0)
         Vn = Vn[:Nmodes]
+        self.simulation_metadata['Vn']=Vn
         Vn=np.matrix(Vn).T
             
         gaps,dgaps=numrec.GetQuadrature(xmin=gapmin,
-                                        xmax=gapmax, \
-                                        N=Ngaps, \
+                                        xmax=gapmax,
+                                        N=Ngaps,
                                         quadrature=zquadrature)
+
+        self.simulation_metadata['gaps']=gaps
+        self.simulation_metadata['dgaps']=dgaps
         
         Erads=[]
         eigenamplitudes=[]
         ScatMats=[]
         Logger.write('Computing response for %i gaps at freq=%s...' % (len(gaps), freq))
         for gap in gaps:
-            
-            self.RSampMat=self.getRsampleMatrix(freq, gap, Nmodes=Nmodes, \
-                                                recompute_rp=recompute_rp, \
-                                                recompute_propagators=recompute_propagators, \
+
+            self.RSampMat=self.getRsampleMatrix(freq, gap, Nmodes=Nmodes,
+                                                recompute_rp=recompute_rp,
+                                                recompute_propagators=recompute_propagators,
                                                 farfield=farfield,
                                                 rp=rp, **kwargs)
             self.ScatMat = (self.RSampMat-RhoMat).getI()
@@ -1205,23 +1214,25 @@ class Probe(object):
             Erad = complex(Vn.T @ self.ScatMat @ Vn)
             Erads.append(Erad)
             eigenamplitudes.append(np.array( self.ScatMat @ Vn).squeeze())
-            
+
             recompute_rp=False
             recompute_propagators=False
         
         #Store the radiated
         Erads=AWA(Erads,axes=[gaps],axis_names=['$z_{\mathrm{tip}}$'])
-        eigenamplitudes=AWA(eigenamplitudes,axes=[gaps,None],\
+        eigenamplitudes=AWA(eigenamplitudes,axes=[gaps,None],
                             axis_names=['$z_{\mathrm{tip}}$','eigenindex'])
-        ScatMats=AWA(ScatMats,axes=[gaps,None,None],\
+        ScatMats=AWA(ScatMats,axes=[gaps,None,None],
                             axis_names=['$z_{\mathrm{tip}}$','eigenindex 1','eigenindex 2'])
         result=dict(Erad=Erads,eigenamplitude=eigenamplitudes,scattering_matrices=ScatMats)
-        
+
+        self.simulation_metadata.update(result)
+
         return result
     
     def EradSpectrumDemodulated(self, freqs, gapmin=.1, amplitude=2,
                                 Ngaps=16, zquadrature=numrec.CC,
-                                Nmodes=20, illum_angles=np.linspace(10,80,20),
+                                Nmodes=20, illum_angles=None,
                                 illum_angle_weights=None,
                                 rp=None, demod_order=4,
                                 farfield=False,
@@ -1247,6 +1258,7 @@ class Probe(object):
                 probe_spectroscopy.set_eigenset(self,freq_wn,
                                                 **probe_spectroscopy_kwargs)
                 # `set_eigenset` will be completely entrusted with reconfiguring the probe
+                update_brightness = True # Not knowing whether we updated eigencharges, we cannot assume brightness is the same
             dErad=self.EradVsGap(freq_wn, gapmin=gapmin, gapmax=gapmax,
                                  Ngaps=Ngaps, zquadrature=zquadrature,
                                  Nmodes=Nmodes, illum_angles=illum_angles,
@@ -1265,12 +1277,12 @@ class Probe(object):
         
         gaps=EradsVsFreq[0].axes[0]
         EradsVsFreq=AWA(EradsVsFreq, axes=[freqs, gaps],
-                        axis_names=['Frequency',r'$z_\mathrm{tip}$']).T
+                        axis_names=['Frequency',r'$z_\mathrm{tip}$']).T # Put z-first
         eigenamplitudesVsFreq=AWA(eigenamplitudesVsFreq, axes=[freqs, gaps, None],
                                   axis_names=['Frequency',r'$z_\mathrm{tip}$','eigenindex']).T
         result=dict(Erad=EradsVsFreq,eigenamplitude=eigenamplitudesVsFreq)
         
-        #--- Demodulate with chebyshev polynomials
+        #--- Demodulate
         if demod_order:
             Sn=demodulate(EradsVsFreq,demod_order=demod_order)
             result['Sn']=Sn
@@ -1319,6 +1331,8 @@ class Probe(object):
 
         # Normalize only if normalization is requested
         if rp_norm is not None:
+
+            simulation_metadata = self.simulation_metadata
             if norm_single_freq: freqs_wn_norm = np.mean(freqs_wn) # a single frequency
             else: freqs_wn_norm = freqs_wn
             freqs_norm = freqs_wn_norm / freq_to_wn
@@ -1330,6 +1344,10 @@ class Probe(object):
                                                        gapmin=gapmin, amplitude=amplitude,
                                                        Ngaps=Ngaps, demod_order=demod_order,
                                                        **kwargs)
+            simulation_metadata_ref = self.simulation_metadata
+            self.simulation_metadata = simulation_metadata
+            self.simulation_metadata_ref = simulation_metadata_ref
+
             signals['Sn_norm'] = signals['Sn'] / signals_ref['Sn']
 
             signals['Sn_norm'].set_axes([None,freqs_wn],
