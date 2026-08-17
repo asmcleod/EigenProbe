@@ -1,3 +1,17 @@
+# Copyright 2026 Dr. Alexander S. McLeod
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+#You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
 import os
 import time
@@ -7,11 +21,11 @@ import functools
 from numbers import Number
 from scipy import linalg
 from scipy.signal import invres,unique_roots
-from common.log import Logger
-from common import plotting
-from common import numerical_recipes as numrec
-from common.baseclasses import AWA
-import ProbeCavityEigenfields as PCE
+from EigenProbe.common.log import Logger
+from EigenProbe.common import plotting
+from EigenProbe.common import numerical_recipes as numrec
+from EigenProbe.common.baseclasses import AWA
+import EigenProbe as EP
 
 #--- Base classes
 
@@ -35,17 +49,17 @@ def get_superset_indices(subset,superset):
 
 #--- Probe Spectroscopy
 
-class ProbeSpectroscopy(PCE.SlenderizeSerialization):
+class ProbeSpectroscopy(EP.SlenderizeSerialization):
 
     # This is a log of those bulky attributes that should be serialized separately,
     # and which should be set to probe name only upon serialization (`__getstate__`)
     # (and they will be unserialized upon `__setstate__`)
-    attrs_to_serialize = {'Probe':PCE.Probe}
+    attrs_to_serialize = {'Probe':EP.Probe}
 
     def __init__(self, Probe):
 
         # Store details of the Probe to restore later
-        assert isinstance(Probe, PCE.Probe)
+        assert isinstance(Probe, EP.Probe)
         self.Probe=Probe.get_name()
 
         self._recorded_eigenrhos = {}
@@ -59,7 +73,7 @@ class ProbeSpectroscopy(PCE.SlenderizeSerialization):
 
     def get_probe(self):
 
-        if isinstance(self.Probe,str): return PCE.get_probe(self.Probe)
+        if isinstance(self.Probe,str): return EP.get_probe(self.Probe)
         else: return self.Probe
 
     def check(self):
@@ -76,7 +90,7 @@ class ProbeSpectroscopy(PCE.SlenderizeSerialization):
 
     filename_template = '(%s)_ProbeSpectroscopy.pickle'
 
-    def save(self, overwrite=False):  return PCE.save(self, overwrite=overwrite)
+    def save(self, overwrite=False):  return EP.save(self, overwrite=overwrite)
 
     def record(self, x):
         """Record probe self impedance and eigenset at coordinate `x`,
@@ -710,7 +724,7 @@ class ProbeGapSpectroscopyParallel(ProbeSpectroscopyParallel):
             if not hasattr(self,'_encodedEigenfields') \
                 or self._encodedEigenfields is None \
                 or reload:
-                self._encodedEigenfields = PCE.load(self.get_probe(),
+                self._encodedEigenfields = EP.load(self.get_probe(),
                                                     EncodedEigenfields)
                 self._encodedEigenfields.EncodedEigenfields = self.get_probe() # ensure that we re-attach our real Probe
                 # There is nothing now to check, `EncodedEigenfields` holds no explicit connection to discretization of probe..`
@@ -720,7 +734,7 @@ class ProbeGapSpectroscopyParallel(ProbeSpectroscopyParallel):
 
         return self._encodedEigenfields
 
-class EncodedEigenfields(PCE.SlenderizeSerialization):
+class EncodedEigenfields(EP.SlenderizeSerialization):
     """This function condensed a `ProbeSpectroscopy` object
     down to an encoded version that can duck-type in some functionalities
     as a `Probe` object.
@@ -734,18 +748,18 @@ class EncodedEigenfields(PCE.SlenderizeSerialization):
 
     def get_probe(self):
 
-        # It is preferred that the `Probe` attribute simply stores the probe name, and PCE does the fetching.
-        if isinstance(self.Probe,str): return PCE.get_probe(self.Probe)
+        # It is preferred that the `Probe` attribute simply stores the probe name, and EP does the fetching.
+        if isinstance(self.Probe,str): return EP.get_probe(self.Probe)
         else: return self.Probe
 
     # This is a log of those bulky attributes that should be serialized separately,
     # and which should be set to probe name only upon serialization (`__getstate__`)
     # (and they will be unserialized upon `__setstate__`)
-    attrs_to_serialize = {'Probe': PCE.Probe}
+    attrs_to_serialize = {'Probe': EP.Probe}
 
     filename_template = '(%s)_EncodedEigenfields.pickle'
 
-    def save(self, overwrite=False):  return PCE.save(self, overwrite=overwrite)
+    def save(self, overwrite=False):  return EP.save(self, overwrite=overwrite)
 
     #--- Initialization
 
@@ -753,7 +767,7 @@ class EncodedEigenfields(PCE.SlenderizeSerialization):
 
     def __init__(self, Spec,gap0=1, Nmodes=20,
                 kappa_min=None, kappa_max=np.inf,
-                Nkappas=244*8, qquadrature=PCE.numrec.GL,
+                Nkappas=244*8, qquadrature=EP.numrec.GL,
                 **brightnesskwargs):
         # This will be the one and only time we have to explicitly calculate eigenfields
         # for any coordinate besides the reference coordinate; ideally all forthcoming
@@ -837,7 +851,7 @@ class EncodedEigenfields(PCE.SlenderizeSerialization):
         return pole
 
     @functools.lru_cache(maxsize=3) #Likely to be called often with the same arguments
-    def BVecs(self, *at_coords, extrapolate=True, kind='linear'):
+    def BVecs(self, *at_coords, extrapolate=False, kind='linear'):
 
         brightnesses_at_coords = self.Brightnesses.interpolate_axis(at_coords, axis=0,
                                                                   extrapolate=extrapolate,
@@ -850,7 +864,7 @@ class EncodedEigenfields(PCE.SlenderizeSerialization):
         return self._BVecs
 
     @functools.lru_cache(maxsize=3) #Likely to be called often with the same arguments
-    def PsiMats(self, *at_coords, extrapolate=True, kind='linear'):
+    def PsiMats(self, *at_coords, extrapolate=False, kind='linear'):
 
         PsiMats_at_coords = self.PsiMats_.interpolate_axis(at_coords, axis=0,
                                                           extrapolate=extrapolate,
@@ -863,7 +877,7 @@ class EncodedEigenfields(PCE.SlenderizeSerialization):
         return self._PsiMats
 
     @functools.lru_cache(maxsize=3) #Likely to be called often with the same arguments
-    def PoleMats(self, *at_coords, extrapolate=True,kind='linear',slender_factor=1):
+    def PoleMats(self, *at_coords, extrapolate=False,kind='linear',slender_factor=1):
 
         Poles_at_coords = self.Poles.interpolate_axis(at_coords, axis=0,
                                                           extrapolate=extrapolate,
@@ -879,17 +893,20 @@ class EncodedEigenfields(PCE.SlenderizeSerialization):
 
         return self._PoleMats
 
-    def EradVsGap(self, at_gaps, freq, RMat0=None, Nmodes=None,rp=None,
-                  record_rp_vals=False, as_AWA=True, interpolation='linear',**kwargs):
+    def EradVsGap(self, at_gaps, freq,
+                  RMat0=None, Nmodes=None,rp=None,
+                  record_rp_vals=False, as_AWA=True,
+                  interpolation='linear',extrapolate=False,
+                  **kwargs):
 
         #--- Get ingredients and restrict to a narrower range of `Nmodes` if requested
         kappas = self.kappas
         dkappas = self.dkappas
         Phi0Vecs = self.Phi0Vecs #column vectors of scalar field vs kappa
 
-        BVecs = self.BVecs(*at_gaps,kind=interpolation)
-        PsiMats = self.PsiMats(*at_gaps,kind=interpolation)
-        PoleMats = self.PoleMats(*at_gaps,kind=interpolation,
+        BVecs = self.BVecs(*at_gaps,kind=interpolation,extrapolate=extrapolate)
+        PsiMats = self.PsiMats(*at_gaps,kind=interpolation,extrapolate=extrapolate)
+        PoleMats = self.PoleMats(*at_gaps,kind=interpolation,extrapolate=extrapolate,
                                  slender_factor =  self.get_slender_factor()) # Provide `slender_factor` as argument so it will be a key for caching
 
         if Nmodes is None:
@@ -898,10 +915,14 @@ class EncodedEigenfields(PCE.SlenderizeSerialization):
         elif RMat0 is not None: # we provided Nmodes *and* Rmat0, so truncate to Nmodes
             RMat0 = RMat0[:Nmodes,:Nmodes]
 
-        Phi0Vecs = Phi0Vecs[:,:Nmodes]
-        BVecs = BVecs[:,:Nmodes]
-        PsiMats = PsiMats[:,:Nmodes,:Nmodes]
-        PoleMats = PoleMats[:,:Nmodes,:Nmodes]
+        dtype = self.get_probe().dtype
+        kappas = kappas.astype(dtype)
+        dkappas = dkappas.astype(dtype)
+
+        Phi0Vecs = Phi0Vecs[:,:Nmodes].astype(dtype)
+        BVecs = BVecs[:,:Nmodes].astype(dtype)
+        PsiMats = PsiMats[:,:Nmodes,:Nmodes].astype(dtype)
+        PoleMats = PoleMats[:,:Nmodes,:Nmodes].astype(dtype)
 
         #--- Get RMat for fields at reference gap
         if RMat0 is None:
@@ -917,6 +938,7 @@ class EncodedEigenfields(PCE.SlenderizeSerialization):
             if record_rp_vals:
                 try: self.rp_vals_vs_q.append(rp_vs_q)
                 except AttributeError: pass
+            rp_vs_q = np.asarray(rp_vs_q).astype(dtype)
             # Here we can see `Phi0Vecs` has column vectors that are the Hankel transform of the potential multiplied by q
             # or, equivalently, they are the Hankel transform of the Ez-eigenfield
             #RMat0 = Phi0Vecs.T @ np.diag(dkappas * rp_vs_q) @ Phi0Vecs
@@ -924,6 +946,7 @@ class EncodedEigenfields(PCE.SlenderizeSerialization):
         else:
             assert RMat0.shape == PsiMats[0].shape,\
                 '`RMat` must be of shape `Nmodes x Nmodes`!'
+        RMat0 = RMat0.astype(dtype)
 
         #--- Execute the loop over gaps values
         Erads = []
@@ -937,8 +960,8 @@ class EncodedEigenfields(PCE.SlenderizeSerialization):
                       ( (RMat - PoleMat).I + (PoleMat).I ) \
                         @ BVec  # scattering/summing etc. is implicit"""
             Erad = BVec.T @ \
-                   ( linalg.solve(RMat - PoleMat, BVec)
-                    + linalg.solve(PoleMat, BVec) ) # Same as matrix inverse; should boost performance in longer runs
+                   ( linalg.solve(RMat - PoleMat, BVec,  assume_a='sym')
+                    + linalg.solve(PoleMat, BVec,  assume_a='sym') ) # Same as matrix inverse; should boost performance in longer runs
             # scattering/summing etc. is implicit
 
             Erads.append( complex(Erad) )
@@ -951,7 +974,7 @@ class EncodedEigenfields(PCE.SlenderizeSerialization):
                                 Ngaps=24, demod_order=5,
                                 record_rp_vals = False,
                                 **kwargs):
-        T = PCE.Timer()
+        T = EP.Timer()
 
         #gaps, weights = get_cheb_zs_weights(Ncheb=Ngaps, A=amplitude, gapmin=gapmin, demod_order=demod_order)
         at_gaps,dgaps=numrec.GetQuadrature(xmin=gapmin,xmax=gapmin+2*amplitude,
@@ -975,7 +998,7 @@ class EncodedEigenfields(PCE.SlenderizeSerialization):
         # --- Demodulate with chebyshev polynomials
         if demod_order:
             if self.verbose: Logger.write('Demodulating...')
-            sns = PCE.demodulate(EradsVsFreq, demod_order=demod_order)
+            sns = EP.demodulate(EradsVsFreq, demod_order=demod_order)
             result['Sn'] = sns
 
         """sns=[]
@@ -1013,7 +1036,7 @@ class EncodedEigenfields(PCE.SlenderizeSerialization):
 
         # Wrap the provided rp functions so they can expand out dimensionless frequencies and wavevectors
         # The supplied reflection function should take `frequency (wavenumbers), q (wavenumbers)`
-        wrapped_rp = PCE.wrap_rp(rp,freq_to_wn,q_to_wn)
+        wrapped_rp = EP.wrap_rp(rp,freq_to_wn,q_to_wn)
 
         signals = self.EradSpectrumDemodulated(freqs, rp=wrapped_rp,
                                                gapmin=gapmin, amplitude=amplitude,
@@ -1031,7 +1054,7 @@ class EncodedEigenfields(PCE.SlenderizeSerialization):
             else: freqs_wn_norm = freqs_wn
             freqs_norm = freqs_wn_norm / freq_to_wn
 
-            wrapped_rp_norm = PCE.wrap_rp(rp_norm, freq_to_wn,q_to_wn)
+            wrapped_rp_norm = EP.wrap_rp(rp_norm, freq_to_wn,q_to_wn)
             signals_ref = self.EradSpectrumDemodulated(freqs_norm, rp=wrapped_rp_norm,
                                                        gapmin=gapmin, amplitude=amplitude,
                                                        Ngaps=Ngaps, demod_order=demod_order,
@@ -1222,7 +1245,7 @@ def find_roots_custom(p, scaling=10):
     return linalg.eigvals(Mstar)
 
 
-class InvertibleEigenfields(PCE.SlenderizeSerialization):
+class InvertibleEigenfields(EP.SlenderizeSerialization):
 
     #--- Loading / saving
 
@@ -1230,14 +1253,14 @@ class InvertibleEigenfields(PCE.SlenderizeSerialization):
 
     def get_probe(self):
 
-        # It is preferred that the `Probe` attribute simply stores the probe name, and PCE does the fetching.
-        if isinstance(self.Probe,str): return PCE.get_probe(self.Probe)
+        # It is preferred that the `Probe` attribute simply stores the probe name, and EP does the fetching.
+        if isinstance(self.Probe,str): return EP.get_probe(self.Probe)
         else: return self.Probe
 
     # This is a log of those bulky attributes that should be serialized separately,
     # and which should be set to probe name only upon serialization (`__getstate__`)
     # (and they will be unserialized upon `__setstate__`)
-    attrs_to_serialize = {'Probe': PCE.Probe}
+    attrs_to_serialize = {'Probe': EP.Probe}
 
     #---- Initialization
 
@@ -1368,20 +1391,20 @@ class InvertibleEigenfields(PCE.SlenderizeSerialization):
     # evaluate_residues=evaluate_residues_poly
 
     def get_demodulation_nodes(self, zmin=.01, amplitude=2, quadrature=numrec.GL,
-                               harmonic=3, Nts=None):
+                               harmonic=3, Ngaps=None):
         # GL quadrature is the best, can do even up to harmonic 3 with 6 points on e.g. SiO2
         # TS requires twice as many points
         # quadrature `None` needs replacing, this linear quadrature is terrible
 
         # max harmonic resolvable will by 1/dt=Nts
-        if not Nts: Nts = 8 * (harmonic+1)
+        if not Ngaps: Ngaps = 8 * (harmonic + 1)
         if isinstance(quadrature, str) or hasattr(quadrature, 'calc_nodes'):
-            ts, wts = numrec.GetQuadrature(N=Nts, xmin=-.5, xmax=0, quadrature=quadrature)
+            ts, wts = numrec.GetQuadrature(N=Ngaps, xmin=-.5, xmax=0, quadrature=quadrature)
 
         else:
-            ts = np.linspace(-1 + 1 / np.float(Nts),
-                                0 - 1 / np.float(Nts), Nts) * .5
-            wts = np.ones((Nts,)) / np.float(Nts) * .5
+            ts = np.linspace(-1 + 1 / np.float(Ngaps),
+                             0 - 1 / np.float(Ngaps), Ngaps) * .5
+            wts = np.ones((Ngaps,)) / np.float(Ngaps) * .5
 
         # This is what's necessary for fourier element
         # cos harmonic kernel, *2 for full period integration, *2 for coefficient
@@ -1440,16 +1463,16 @@ class InvertibleEigenfields(PCE.SlenderizeSerialization):
 
         return self.get_Erad_from_nodes( beta, nodes, Nmodes=Nmodes)
 
-    def EradSpectrumDemodulated(self,beta, zmin=.01,amplitude=2,
-                             max_harmonic=5,Nts=None, Nmodes=None):
+    def EradSpectrumDemodulated(self, beta, zmin=.01, amplitude=2,
+                                max_harmonic=5, Ngaps=None, Nmodes=None):
 
         harmonics = np.arange(max_harmonic+1)
 
         signals = []
         for harmonic in harmonics:
 
-            nodes = self.get_demodulation_nodes( zmin=zmin, amplitude=amplitude, quadrature=numrec.GL,
-                                                harmonic=harmonic, Nts=Nts)
+            nodes = self.get_demodulation_nodes(zmin=zmin, amplitude=amplitude, quadrature=numrec.GL,
+                                                harmonic=harmonic, Ngaps=Ngaps)
             signal_at_nodes = self.get_Erad_from_nodes(beta, nodes, Nmodes=Nmodes)
             signal = np.sum(signal_at_nodes,axis=-1) #last axis will be across nodes
             signals.append(signal)
@@ -1474,19 +1497,20 @@ class InvertibleEigenfields(PCE.SlenderizeSerialization):
         to_nm = a_nm / self.get_probe().get_a(); from_nm = 1/to_nm
         amplitude = amplitude_nm * from_nm
         gapmin = gapmin_nm * from_nm
-        print('amplitude=',amplitude)
-        print('gapmin=',gapmin)
+        if self.verbose:
+            print('amplitude=',amplitude)
+            print('gapmin=',gapmin)
 
         signals={}
-        signals['Sn'] = self.EradSpectrumDemodulated(beta, zmin=gapmin,amplitude=amplitude,
-                                            max_harmonic=max_harmonic,Nts=Ngaps, Nmodes=Nmodes)
+        signals['Sn'] = self.EradSpectrumDemodulated(beta, zmin=gapmin, amplitude=amplitude,
+                                                     max_harmonic=max_harmonic, Ngaps=Ngaps, Nmodes=Nmodes)
 
         # Normalize only if normalization is requested
         if beta_norm is not None:
 
             signals_ref={}
-            signals_ref['Sn'] = self.EradSpectrumDemodulated(beta_norm, zmin=gapmin,amplitude=amplitude,
-                                                             max_harmonic=max_harmonic,Nts=Ngaps, Nmodes=Nmodes)
+            signals_ref['Sn'] = self.EradSpectrumDemodulated(beta_norm, zmin=gapmin, amplitude=amplitude,
+                                                             max_harmonic=max_harmonic, Ngaps=Ngaps, Nmodes=Nmodes)
             if signals_ref['Sn'].ndim == 2 and signals_ref['Sn'].ndim ==1: # In case we have second frequency axis
                 signals['Sn_norm'] = signals['Sn'] / signals_ref['Sn'][:,np.newaxis]
             else: signals['Sn_norm'] = signals['Sn'] / signals_ref['Sn']

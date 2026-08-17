@@ -1,3 +1,17 @@
+# Copyright 2026 Dr. Alexander S. McLeod
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+#You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # -*- coding: utf-8 -*-
 
 import os
@@ -7,7 +21,6 @@ import time
 import numpy as np
 from collections import UserDict
 from numbers import Number
-from common.log import Logger
 from matplotlib import pyplot as plt
 import inspect
 
@@ -15,9 +28,9 @@ import warnings
 warnings.filterwarnings('ignore')
 
 from scipy.linalg import eig,eigh,solve
-from common import numerics
+from EigenProbe.common import numerics
 num=numerics
-from common.baseclasses import ArrayWithAxes as AWA
+from EigenProbe.common.baseclasses import ArrayWithAxes as AWA
 
 from . import RotationalMoM as RotMoM
 from .RotationalMoM import *
@@ -186,7 +199,7 @@ class _ProbesCollection(UserDict):
 
         return probe_name
 
-    _overwrite = False
+    _overwrite = True
 
     def overwrite(self, enable=None):
 
@@ -253,7 +266,7 @@ class Probe(object):
     dtype = np.complex64
     
     def __init__(self,zs=None,rs=None,
-                 Nnodes=244,L=None,quadrature=numrec.GL,
+                 Nnodes=244,L=None,quadrature=numrec.GL,remesh=True,
                  a=None,taper_angle=20,geometry='hyperboloid',Rtop=0,
                  freq=None,gap=None,Nsubnodes=2,closed=False,
                  name=None,**kwargs):
@@ -280,8 +293,9 @@ class Probe(object):
                 assert hasattr(geometry,'__call__')
                 rs=geometry(zs,L=L,a=a,**kwargs)
 
-        self.MethodOfMoments = RotMoM.BodyOfRevolution(rs, zs, closed=closed, \
-                                                       Nsubnodes=Nsubnodes, display=True)
+        self.MethodOfMoments = RotMoM.BodyOfRevolution(rs, zs,
+                                                       remesh=remesh,quadrature=quadrature,closed=closed,
+                                                       Nnodes=Nnodes,Nsubnodes=Nsubnodes)
         self.MoM=self.MethodOfMoments
 
         self._eigenrhos=None

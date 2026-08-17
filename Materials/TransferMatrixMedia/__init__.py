@@ -1,0 +1,235 @@
+# Copyright 2026 Dr. Alexander S. McLeod
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+#You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+import numpy; np=numpy
+from EigenProbe.Materials.material_types import *
+from EigenProbe.Materials.material_types import _prepare_freq_and_q_holder_
+from EigenProbe.Materials.TransferMatrixMedia import MatrixBuilder as mb
+from EigenProbe.Materials.TransferMatrixMedia import Calculator
+
+class LayeredMediaTM(LayeredMedia):
+    
+    def __init__(self,*layers,layerArrayGUIInput=None,**kwargs):
+         
+        if layerArrayGUIInput==None:
+            self.set_layers(*layers)
+         
+        else:
+            print(layerArrayGUIInput!= None)
+            print(layerArrayGUIInput)
+            self.set_layers(*layerArrayGUIInput)
+        
+        #Set default entrance/exit materials
+        exkwargs=misc.extract_kwargs(kwargs,entrance=Air,exit=Air)
+        self.set_entrance(exkwargs['entrance'])
+        self.set_exit(exkwargs['exit'])
+         
+        self.T_p = mb.TransferMatrix(self,polarization='p')
+        self.T_s = mb.TransferMatrix(self,polarization='s')
+
+    def __getstate__(self):
+
+        state = self.__dict__.copy()
+        unpicklables = (Calculator.Calculator,) # We can't pickle this one, but it will be re-initialized when needed
+        for key,val in self.__dict__.items():
+            if isinstance(val,unpicklables):
+                del state[key]
+
+        return state
+        
+    def reflection_s(self,freq,q=0,angle=None,\
+                     entrance=None,exit=None,**kwargs):
+        """Get numerical reflection coefficient for s-polarized light.
+        
+        First the analytical expression for reflection coefficient is assembled. 
+        Then the numerical values are evaluated in the helper class Calculator. 
+        
+        Args:
+            freq (array): numpy.ndarray array of frequencies of incident light; in unit of cm^-1
+            q (array): numpy.ndarray of in-plane momenta associated with incident light; in unit of cm^-1
+        
+        Return:
+            Numerical reflection coefficient with corresponding dimension of 
+            array (based on dimension of freq and q).
+        
+        """
+        freq,q,rsAWA = _prepare_freq_and_q_holder_(freq,q,angle=angle,entrance=entrance)
+        if not hasattr(self,'C_s'):
+            self.C_s = Calculator.Calculator(self.T_s)
+            self.C_s.assemble_analytical_reflection_coefficient()
+        rs = self.C_s.get_numerical_reflection_coefficient(freq,q)
+        rsAWA+=rs
+        return rsAWA
+        
+    def analytical_reflection_s(self):
+        """Get sympy analytical expression of reflection coefficient for s-polarized light."""
+        if not hasattr(self,'C_s'):
+            self.C_s = Calculator.Calculator(self.T_s)
+            self.C_s.assemble_analytical_reflection_coefficient()
+        rs = self.C_s.get_analytical_reflection_coefficient()
+        return rs
+        
+    def reflection_p(self,freq,q=0,angle=None,\
+                     entrance=None,exit=None,**kwargs):
+        """Get numerical reflection coefficient for p-polarized light.
+        
+        First the analytical expression for reflection coefficient is assembled. 
+        Then the numerical values are evaluated in the helper class Calculator. 
+        
+        Args:
+            freq (array): numpy.ndarray array of frequencies of incident light; in unit of cm^-1
+            q (array): numpy.ndarray of in-plane momenta associated with incident light; in unit of cm^-1
+        
+        Return:
+            The numerical reflection coefficient with corresponding dimension of 
+            array (based on dimension of freq and q).
+        
+        """        
+        freq,q,rpAWA = _prepare_freq_and_q_holder_(freq,q,angle=angle,entrance=entrance)
+        if not hasattr(self,'C_p'):
+            self.C_p = Calculator.Calculator(self.T_p)
+            self.C_p.assemble_analytical_reflection_coefficient()
+        rp = self.C_p.get_numerical_reflection_coefficient(freq,q)
+        rpAWA+=rp
+        return rpAWA
+    
+    def analytical_reflection_p(self):
+        """Get sympy analytical expression of reflection coefficient for p-polarized light."""
+        if not hasattr(self,'C_p'):
+            self.C_p = Calculator.Calculator(self.T_p)
+            self.C_p.assemble_analytical_reflection_coefficient()
+        rp = self.C_p.get_analytical_reflection_coefficient()
+        return rp
+    
+    def coulomb_kernel(self,freq,q=0,layer_number=2,mode='after',\
+                       angle=None,entrance=None,exit=None,**kwargs):
+        """Get numerical reflection coefficient for p-polarized light.
+        
+        First the analytical expression for reflection coefficient is assembled. 
+        Then the numerical values are evaluated in the helper class Calculator. 
+        
+        Args:
+            freq (array): numpy.ndarray array of frequencies of incident light; in unit of cm^-1
+            q (array): numpy.ndarray of in-plane momenta associated with incident light; in unit of cm^-1
+        
+        Return:
+            The numerical reflection coefficient with corresponding dimension of 
+            array (based on dimension of freq and q).
+        
+        """        
+        freq,q,K_AWA = _prepare_freq_and_q_holder_(freq,q,angle=angle,entrance=entrance)
+        C = Calculator.Calculator(self.T_p)
+        
+        C.assemble_analytical_kernel(layer_number,mode)
+        K=C.get_numerical_kernel(freq,q)
+        
+        K_AWA+=K
+        return K_AWA
+    
+    def analytical_coulomb_kernel(self,layer_number=2,mode='after'):
+        """Get sympy analytical expression of reflection coefficient for p-polarized light."""
+        C = Calculator.Calculator(self.T_p)
+        C.assemble_analytical_reflection_coefficient()
+        rp = C.get_analytical_coulomb_kernel(layer_number,mode)
+        return rp
+    
+    def transmission_s(self,freq,q=0,angle=None,\
+                     entrance=None,exit=None,**kwargs):
+        """Get numerical transmission coefficient for s-polarized light.
+        
+        First the analytical expression for transmission coefficient is assembled. 
+        Then the numerical values are evaluated in the helper class Calculator. 
+        
+        Args:
+            freq (array): numpy.ndarray array of frequencies of incident light; in unit of cm^-1
+            q (array): numpy.ndarray of in-plane momenta associated with incident light; in unit of cm^-1
+        
+        Return:
+            Numerical transmission coefficient with corresponding dimension of 
+            array (based on dimension of freq and q).
+        
+        """
+        freq,q,tsAWA = _prepare_freq_and_q_holder_(freq,q,angle=angle,entrance=entrance)
+        C = Calculator.Calculator(self.T_s)
+        C.assemble_analytical_transmission_coefficient()
+        ts = C.get_numerical_transmission_coefficient(freq,q)
+        tsAWA+=ts
+        return tsAWA
+    
+    def analytical_transmission_s(self):
+        """Get sympy analytical expression of transmission coefficient for s-polarized light."""
+        C = Calculator.Calculator(self.T_s)
+        C.assemble_analytical_transmission_coefficient()
+        ts = C.get_analytical_transmission_coefficient()
+        return ts
+        
+    def transmission_p(self,freq,q=0,angle=None,\
+                     entrance=None,exit=None,**kwargs):
+        """Get numerical transmission coefficient for p-polarized light.
+        
+        First the analytical expression for transmission coefficient is assembled. 
+        Then the numerical values are evaluated in the helper class Calculator. 
+        
+        Args:
+            freq (array): numpy.ndarray array of frequencies of incident light; in unit of cm^-1
+            q (array): numpy.ndarray of in-plane momenta associated with incident light; in unit of cm^-1
+        
+        Return:
+            The numerical transmission coefficient with corresponding dimension of 
+            array (based on dimension of freq and q).
+        
+        """
+        freq,q,tpAWA = _prepare_freq_and_q_holder_(freq,q,angle=angle,entrance=entrance)
+        C = Calculator.Calculator(self.T_p)
+        C.assemble_analytical_transmission_coefficient()
+        tp = C.get_numerical_transmission_coefficient(freq,q)
+        tpAWA+=tp
+        return tpAWA
+    
+    def analytical_transmission_p(self):
+        """Get sympy analytical expression of transmission coefficient for p-polarized light."""
+        C = Calculator.Calculator(self.T_p)
+        C.assemble_analytical_transmission_coefficient()
+        tp = C.get_analytical_transmission_coefficient()
+        return tp
+    
+    def h_field(self,freq,q=0,index=1,side='before'):
+        freq,q,hAWA = _prepare_freq_and_q_holder_(freq,q)
+        C = Calculator.Calculator(self.T_p)
+        C.assemble_analytical_H_field(index,side=side)
+        h = C.get_numerical_H_field(freq,q)
+        hAWA+=h
+        return hAWA
+    
+    def analytical_h_field(self,index,side):
+        C = Calculator.Calculator(self.T_p)
+        C.assemble_analytical_H_field(index,side)
+        h = C.get_analytical_H_field()
+        return h
+        
+    def Coulomb_kernel(self,freq,q=0,index=1,angle=None,\
+                     entrance=None,exit=None,**kwargs):
+        freq,q,kAWA = _prepare_freq_and_q_holder_(freq,q,angle=angle,entrance=entrance)
+        C = Calculator.Calculator(self.T_p)
+        C.assemble_analytical_kernel(index,'before')
+        k = C.get_numerical_kernel(freq,q)
+        kAWA+=k
+        return kAWA
+        
+    def analytical_Coulomb_kernel(self,index,side):
+        
+        C = Calculator.Calculator(self.T_p)
+        C.assemble_analytical_kernel(index,side)
+        k = C.get_analytical_kernel()
+        return k

@@ -1,3 +1,17 @@
+# Copyright 2026 Dr. Alexander S. McLeod
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+#You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import numpy as np
 import os
 import time
@@ -8,17 +22,16 @@ from numbers import Number
 from scipy import linalg
 from scipy.optimize import leastsq
 from matplotlib import pyplot as plt
-from common.log import Logger
-from common import misc,plotting
-from common import numerical_recipes as numrec
-from common.baseclasses import AWA
-import ProbeCavityEigenfields as PCE
-from ProbeCavityEigenfields import ProbeSpectroscopy as PS
+from EigenProbe.common import misc,plotting
+from EigenProbe.common import numerical_recipes as numrec
+from EigenProbe.common.baseclasses import AWA
+import EigenProbe as EP
+from EigenProbe import ProbeSpectroscopy as PS
 
 # Everyone will share this definition of qp corresponding to zero 2D conductivity
-qpmax=1e50*(1+1j)
+qpmax=qp_vacuum=1e50*(1+1j)
 
-class EncodedEigenfieldsPredictor(PCE.SlenderizeSerialization):
+class EncodedEigenfieldsPredictor(EP.SlenderizeSerialization):
     """Simple predictor callable as `Predictor(qp,eps)` that will delivery a normalized signal
     as quickly as possible using the information from a `PS.EncodedEigenfields` instance."""
 
@@ -26,13 +39,13 @@ class EncodedEigenfieldsPredictor(PCE.SlenderizeSerialization):
 
     filename_template = '(%s)_EncodedEigenfieldsPredictor.pickle'
 
-    attrs_to_serialize = {'Probe': PCE.Probe,
+    attrs_to_serialize = {'Probe': EP.Probe,
                           'EncodedEigenfields':PS.EncodedEigenfields}
 
     #---- Initialization
 
     def __init__(self, encoded_eigenfields,
-                 zmin=.1, A=2, Nts=24,
+                 zmin=.1, A=2, Ngaps=24,
                  harmonic=2,
                  qp_ref=1e8,
                  eps_ref=1e8,
@@ -41,7 +54,7 @@ class EncodedEigenfieldsPredictor(PCE.SlenderizeSerialization):
         assert isinstance(encoded_eigenfields, PS.EncodedEigenfields)
 
         # Demodulation quadrature nodes (and weights) in time
-        self.ts, self.dts = numrec.GetQuadrature(N=Nts, xmin=-.5, xmax=0,
+        self.ts, self.dts = numrec.GetQuadrature(N=Ngaps, xmin=-.5, xmax=0,
                                                  quadrature=numrec.GL)
         self.kernel = np.cos(2 * np.pi * harmonic * self.ts) * self.dts
         self.kernel -= np.mean(self.kernel)
@@ -62,6 +75,10 @@ class EncodedEigenfieldsPredictor(PCE.SlenderizeSerialization):
         return arg.real + 1j * np.abs(arg.imag)
 
     def compute_signal(self, qp, eps):  # This simulates a 2D material
+
+        if qp is None:
+            global qp_vacuum
+            qp=qp_vacuum
 
         # Inhibit negative imaginary for qp or eps
         qp = self.massage_arg(qp)
@@ -95,7 +112,7 @@ class EncodedEigenfieldsPredictor(PCE.SlenderizeSerialization):
 
         return self.compute_norm_signal(*args, **kwargs)
 
-class InvertibleEigenfieldsPredictor(PCE.SlenderizeSerialization):
+class InvertibleEigenfieldsPredictor(EP.SlenderizeSerialization):
     """Simple predictor callable as `Predictor(qp,eps)` that will delivery a normalized signal
     as quickly as possible using the information from a `PS.EncodedEigenfields` instance."""
 
@@ -103,27 +120,27 @@ class InvertibleEigenfieldsPredictor(PCE.SlenderizeSerialization):
 
     filename_template = '(%s)_InvertibleEigenfieldsPredictor.pickle'
 
-    attrs_to_serialize = {'Probe': PCE.Probe,
+    attrs_to_serialize = {'Probe': EP.Probe,
                           'InvertibleEigenfields':PS.InvertibleEigenfields}
 
     #---- Initialization
 
     def __init__(self, invertible_eigenfields,
-                 zmin=.1, A=2, Nts=24,
+                 zmin=.1, A=2, Ngaps=24,
                  harmonic=2,
                  eps_ref=1e8,
                  Nmodes=20):
         assert isinstance(invertible_eigenfields, PS.InvertibleEigenfields)
 
         # Demodulation quadrature nodes (and weights) in time
-        self.ts, self.dts = numrec.GetQuadrature(N=Nts, xmin=-.5, xmax=0,
+        self.ts, self.dts = numrec.GetQuadrature(N=Ngaps, xmin=-.5, xmax=0,
                                                  quadrature=numrec.GL)
         self.kernel = np.cos(2 * np.pi * harmonic * self.ts) * self.dts
         self.kernel -= np.mean(self.kernel)
 
         # Corresponding gap heights
         self.nodes = invertible_eigenfields.get_demodulation_nodes(zmin=zmin, amplitude=A, quadrature=numrec.GL,
-                                                                   harmonic=harmonic, Nts=Nts)
+                                                                   harmonic=harmonic, Ngaps=Ngaps)
         self.freq = invertible_eigenfields.get_probe().get_freq()
         self.InvertibleEigenfields = invertible_eigenfields
         self.Nmodes=Nmodes
@@ -137,7 +154,9 @@ class InvertibleEigenfieldsPredictor(PCE.SlenderizeSerialization):
 
         return arg.real + 1j * np.abs(arg.imag)
 
-    def compute_signal(self, eps, **kwargs):  # This simulates a bulk material
+    def compute_signal(self, eps, qp=None, **kwargs):  # This simulates a bulk material
+
+        # qp is not (yet) used
 
         # Inhibit negative imaginary for qp or eps
         eps = self.massage_arg(eps)
@@ -155,9 +174,9 @@ class InvertibleEigenfieldsPredictor(PCE.SlenderizeSerialization):
         S = self.compute_signal(eps_ref, **kwargs)
         self.S_ref = S  # Signal value to which we pretend data were referenced
 
-    def compute_norm_signal(self, eps, **kwargs):
+    def compute_norm_signal(self, eps, qp = None,  **kwargs):
 
-        S = self.compute_signal(eps, **kwargs)
+        S = self.compute_signal(eps, qp=qp, **kwargs)
 
         return S / self.S_ref
 
@@ -165,12 +184,12 @@ class InvertibleEigenfieldsPredictor(PCE.SlenderizeSerialization):
         return self.compute_norm_signal(*args, **kwargs)
 
 
-class LayeredMediaEncodedEigenfieldsPredictor(PCE.SlenderizeSerialization):
+class LayeredMediaEncodedEigenfieldsPredictor(EP.SlenderizeSerialization):
     """Simple predictor callable as `Predictor(qp,eps)` that will delivery a normalized signal
     as quickly as possible using the information from a `PS.EncodedEigenfields` instance.
 
     The full thickness of a 2D material will be incorporated into the simulation, at some expense,
-    using the `reflection_p` attribute of a `NearFieldOptics.Materials.LayeredMediaTM` instance.
+    using the `reflection_p` attribute of a `EigenProbe.Materials.LayeredMediaTM` instance.
     The thickness of the layer must be specified in nanometers.
 
     For this predictor, all supplied values of `qp` will be interpreted in units of wavenumbers."""
@@ -179,7 +198,7 @@ class LayeredMediaEncodedEigenfieldsPredictor(PCE.SlenderizeSerialization):
 
     filename_template = '(%s)_LayeredMediaEncodedEigenfieldsPredictor.pickle'
 
-    attrs_to_serialize = {'Probe': PCE.Probe,
+    attrs_to_serialize = {'Probe': EP.Probe,
                           'EncodedEigenfields': PS.EncodedEigenfields}
 
     # ---- Initialization
@@ -189,16 +208,14 @@ class LayeredMediaEncodedEigenfieldsPredictor(PCE.SlenderizeSerialization):
                  harmonic=2,
                  qp_ref=1e30,
                  eps_ref=1e8,
-                 a_nm=30, amplitude_nm=50, Nts=24, gapmin_nm=1,
+                 a_nm=30, amplitude_nm=50, Ngaps=24, gapmin_nm=1,
                  L_cm=20e-4, Nmodes=15):
 
-        from NearFieldOptics import Materials as M
+        from EigenProbe import Materials as M
         assert isinstance(layers,M.LayeredMediaTM)
         assert isinstance(substrate_material,M.Material)
         assert isinstance(film_layer,M.Layer)
         assert film_layer in layers.get_layers()
-
-        self.qpmax = 1e28
 
         # ---- Attach probe
         assert isinstance(encoded_eigenfields, PS.EncodedEigenfields)
@@ -222,7 +239,7 @@ class LayeredMediaEncodedEigenfieldsPredictor(PCE.SlenderizeSerialization):
         # ---- Build gaps and demodulation kernel
         # Demodulation quadrature nodes (and weights) in time
         from common import numerical_recipes as numrec
-        self.ts, self.dts = numrec.GetQuadrature(N=Nts, xmin=-.5, xmax=0,
+        self.ts, self.dts = numrec.GetQuadrature(N=Ngaps, xmin=-.5, xmax=0,
                                                  quadrature=numrec.GL)
         self.kernel = np.cos(2 * np.pi * harmonic * self.ts) * self.dts
         self.kernel -= np.mean(self.kernel)
@@ -253,7 +270,7 @@ class LayeredMediaEncodedEigenfieldsPredictor(PCE.SlenderizeSerialization):
         freqs_to_wn = state['freq_to_wn']
         q_to_wn = state['q_to_wn']
 
-        self.wrapped_rp = PCE.wrap_rp(rp, freqs_to_wn, q_to_wn)
+        self.wrapped_rp = EP.wrap_rp(rp, freqs_to_wn, q_to_wn)
 
     def __getstate__(self):
 
@@ -289,13 +306,27 @@ class LayeredMediaEncodedEigenfieldsPredictor(PCE.SlenderizeSerialization):
 
         return eps_thin_film
 
+    def eps_to_qp_thin_film(self, eps):
+
+        # Assume qp comes in units of wavenumbers
+        # (rp wrapped will take inputs as wavenumbers)
+
+        t_cm = self.thickness_nm*1e-7
+        qp = 2 / ((1-eps) * t_cm)
+
+        return qp
+
     def set_materials(self, qp, eps):
+
+        if qp is None:
+            global qp_vacuum
+            qp=qp_vacuum
 
         # Inhibit negative imaginary for qp or eps
         qp = self.massage_arg(qp)  # understood in units of wavenumbers
 
         self.eps = self.massage_arg(eps)
-        if qp.real >= self.qpmax.real: # If top layer is "invisible", then make it identical to substrate
+        if qp.real >= qpmax.real: # If top layer is "invisible", then make it identical to substrate
             self.eps_thin_film = self.eps
         else:
             self.eps_thin_film = self.qp_to_eps_thin_film(qp)
@@ -333,7 +364,7 @@ class LayeredMediaEncodedEigenfieldsPredictor(PCE.SlenderizeSerialization):
 
         return self.compute_norm_signal(*args, **kwargs)
 
-class VariationalMaterial2D(PCE.SlenderizeSerialization):
+class VariationalMaterial2D(EP.SlenderizeSerialization):
 
     #----- Saving / loading
 
@@ -415,7 +446,7 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
 
     def faddeeva_oscillator(self, params, freqs=None):  # This is a gaussian oscillator that will be used for local (fine) fitting
 
-        from NearFieldOptics.Materials.faddeeva import faddeeva
+        from EigenProbe.Materials.faddeeva import faddeeva
 
         assert len(params)==3
         amp, f0, gamma = params
@@ -456,8 +487,9 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
         self.eps_fine_amps = [amp]*Nosc
         df = np.max(self.freqs) - np.min(self.freqs)
         gamma = df/Nosc
-        gamma_boost=0.5
+        gamma_boost=1
         self.eps_fine_gammas = [gamma*gamma_boost] * Nosc  # Let's have an oscillator every `gamma`
+        # Why do we extend the frequency placements beyond the observation window?  Because this gives more freedom to fit within the window.
         self.eps_fine_freqs = np.linspace(np.min(self.freqs),
                                           np.max(self.freqs),
                                           Nosc)
@@ -527,7 +559,8 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
         excess_eps2D += self.oscillators(params_coarse,freqs)
 
         # Fine oscillators
-        if len(self.qp_faddeeva_basis)!=len(self.qp_fine_amps):
+        if len(self.qp_faddeeva_basis)!=len(self.qp_fine_amps) \
+                or len(self.qp_faddeeva_basis[0])!=len(self.freqs): # Fine oscillators are internally inconsistent, update them.
             self.set_qp_faddeeva_basis()
         eps2D_faddeeva = np.sum([amp*fad for amp,fad \
                                in zip(self.qp_fine_amps,self.qp_faddeeva_basis)],
@@ -560,7 +593,8 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
         eps += self.oscillators(params_coarse,freqs)
 
         # Fine oscillators
-        if len(self.eps_faddeeva_basis)!=len(self.eps_fine_amps):
+        if len(self.eps_faddeeva_basis)!=len(self.eps_fine_amps) \
+                or len(self.eps_faddeeva_basis[0])!=len(self.freqs): # Fine oscillators are internally inconsistent, update them.
             self.set_eps_faddeeva_basis()
         eps_faddeeva = np.sum([amp * fad for amp, fad \
                                in zip(self.eps_fine_amps, self.eps_faddeeva_basis)],
@@ -648,8 +682,8 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
         S_preds = self.predict(qps_enabled=True)
 
         S_targets = S_targets_r + 1j * S_targets_i
-        certainty =  1 - np.abs(S_targets_std / S_targets)
-        certainty = np.where(certainty>0,certainty,0)
+        certainty =  np.mean(np.abs(S_targets_std))/np.abs(S_targets_std) # Noise level is in denominator, relative to typical noise level
+        certainty[~np.isfinite(certainty)]=1
 
         if weights is None: weights=1
         Rs = np.abs(S_preds - S_targets) ** exp * certainty * weights
@@ -763,10 +797,29 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
                           S_targets_std, weights=weights, exp=exp)  # Just to compute `self.R`
         return self.R
 
+    def dynamic_plot(self):
+
+        try: kwargs = self.dynamic_plotting
+        except AttributeError:
+            raise AttributeError('To use dynamic plotting, attach a `dynamic_plotting` dictionary.')
+
+        fig = kwargs['fig']
+        line_abs = kwargs['line_abs']
+        line_imag = kwargs['line_imag']
+
+        S_pred = self.predict()
+        line_abs.set_ydata(np.abs(S_pred))
+        line_imag.set_ydata(np.imag(S_pred))
+        fig.canvas.draw()
+
+        if 'wait' in kwargs:
+            import time
+            time.sleep(kwargs['wait'])
+
     def optimize(self, S_targets, S_targets_std=None, weights=None,
                  exp_start=0.5, exp_stop=2,
                  Nsubcycles=1, Ncycles=1,
-                 factor=1, full_output=False, xtol=1e-3, ftol=1e-3,
+                 factor=1, full_output=False, xtol=1e-8, ftol=1e-8,
                  randomization=1e-3, exit_criterion=1e-3,
                  plot_residuals=False,
                  **kwargs):
@@ -818,6 +871,9 @@ class VariationalMaterial2D(PCE.SlenderizeSerialization):
                     print('R=%1.2f; time elapsed (s) in cycle: %1.2f' % (self.R, time.time() - t0))
                     all_R_vals.append(self.R)
                     all_params.append(params)
+
+                    if hasattr(self,'dynamic_plotting'):
+                        self.dynamic_plot()
 
                     if np.abs(self.R - all_R_vals[-2]) / self.R <= exit_criterion:
                         print('Exit criterion %1.2G satisfied...' % exit_criterion)
@@ -1045,7 +1101,7 @@ def Fit_eps_PointByPoint(S_targets, target_fs,
         S_target_real, S_target_imag, Predictor, qp, exp = args
 
         S_target = S_target_real + 1j * S_target_imag
-        prediction = Predictor(qp, eps)
+        prediction = Predictor(qp=qp, eps=eps)
 
         to_minimize = [np.abs(np.real(prediction - S_target)) ** exp,
                        np.abs(np.imag(prediction - S_target)) ** exp]
@@ -1063,7 +1119,9 @@ def Fit_eps_PointByPoint(S_targets, target_fs,
 
     # Loop over frequencies and target values, find matching permittivity at each
     t0 = time.time()
-    qp = 1e20  # A qp value big enough to turn off 2D material
+
+    global qpmax
+    qp = qpmax  # A qp value big enough to turn off 2D material (`None` also works)
     deps = 1e-2  # An infinitessimal permittivity for computing variation of output to input
 
     for i,(freq, S_target) in enumerate(zip(target_fs, S_targets)):
@@ -1087,8 +1145,8 @@ def Fit_eps_PointByPoint(S_targets, target_fs,
 
         # Store result
         epss_pred.append(eps_pred)
-        Ss_pred.append(Predictor(qp, eps_pred))
-        Ss_pred2.append(Predictor(qp, eps_pred + deps))
+        Ss_pred.append(Predictor(qp=qp, eps=eps_pred))
+        Ss_pred2.append(Predictor(qp=qp, eps=eps_pred + deps))
 
     print('Elapsed:', time.time() - t0)
 
@@ -1249,8 +1307,6 @@ def Fit_qp_PointByPoint(S_targets, target_fs,
         target_fs = target_fs[::-1]
 
     # Predictor should give signal from (2D+substrate) relative to (substrate)
-    global qpmax
-    Predictor_subs_norm = lambda qp, eps: Predictor(qp, eps) / Predictor(qpmax, eps)
 
     # Holders for point-by-point parameters
     qps_pred = []  # We will fill this with predicted `q_p` values at each frequency
@@ -1267,6 +1323,11 @@ def Fit_qp_PointByPoint(S_targets, target_fs,
         if hasattr(qp_guess, '__len__'): qp0 = qp_guess[i]
         elif i==0: qp0 = qp_guess
         else: qp0 = qp_guess # Take previous prediction value
+
+        # Update the normalized predictor to use substrate permittivity
+        global qpmax
+        signal_substrate = Predictor(qpmax, eps)
+        Predictor_subs_norm = lambda qp, eps: Predictor(qp, eps) / signal_substrate
 
         # Update the guess qp and arguments to fit
         x0 = (qp0.real, qp0.imag)

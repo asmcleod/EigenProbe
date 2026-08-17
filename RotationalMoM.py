@@ -1,12 +1,28 @@
+# Copyright 2026 Dr. Alexander S. McLeod
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+#You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import sys
 import numpy as np
 from scipy.special import j0,j1,ellipk
 from scipy.integrate import quad,nquad
-from numba import njit
-from common.log import Logger
-from common import numerical_recipes as numrec
-from common.baseclasses import AWA
+from EigenProbe.common.log import Logger
+from EigenProbe.common import numerical_recipes as numrec
+from EigenProbe.common.baseclasses import AWA
 import time
+
+from numba import njit
+
 
 quadlimit=100
 MultiSamples=(-1,+1) #Simpson's rule
@@ -669,7 +685,7 @@ def get_BoR_radii(zs, L=1000, z0=0, a=1, taper_angle=20, geometry='cone', Rtop=0
 
 class BodyOfRevolution(object):
 
-    def __init__(self,Rs,zs,Nsubnodes=6,closed=False,display=True,
+    def __init__(self,Rs,zs,Nnodes=None,Nsubnodes=6,closed=False,display=True,
                  remesh=True,quadrature='GL',interpolation='quadratic'):
 
         # --- Checks
@@ -696,7 +712,7 @@ class BodyOfRevolution(object):
                 zs = np.append(zs, [zT])
                 Rs = np.append(Rs, [Rmin])
 
-        #--- Re-mesh to quadrature-evaluatd values of annualar coordinate "t", if requested
+        #--- Re-mesh to quadrature-evaluated values of annualar coordinate "t", if requested
         if remesh:
             if display: Logger.write('Re-meshing provided geometry to quadrature points along annular coordinate `t`...')
             # Compute the annular coordinates for each supplied radius
@@ -710,7 +726,8 @@ class BodyOfRevolution(object):
 
             # Build interpolators and determine target interpolation points
             zs = AWA(zs,axes=[ts]); Rs = AWA(Rs,axes=[ts])
-            ts,_ = numrec.GetQuadrature(len(ts),xmin=ts.min(),xmax=ts.max(),
+            if Nnodes is None: Nnodes=len(ts)
+            ts,_ = numrec.GetQuadrature(Nnodes,xmin=ts.min(),xmax=ts.max(),
                                         quadrature=quadrature)
 
             # Interpolate, replacing earlier values of `zs`, `Rs`
@@ -724,7 +741,7 @@ class BodyOfRevolution(object):
         self.node_zs = np.array(zs[1:-1])
         self.Nnodes = len(self.node_zs)
 
-        if display: Logger.write('Discretizing body of revolution over %i annular nodes and %i subnodes...'\
+        Logger.write('Discretizing body of revolution over %i annular nodes and %i subnodes...'\
                                  %(self.Nnodes,self.Nsubnodes))
 
         self.node_terminal_zs = zs
