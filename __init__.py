@@ -416,7 +416,7 @@ class Probe(object):
 
     def get_kappa_max(self):
 
-        kappa_a = 10/self.get_a()
+        kappa_a = 1/self.get_a()
 
         return kappa_a * self._kappa_max_factor
     
@@ -1101,8 +1101,8 @@ class Probe(object):
 
     #--- Real-space field calculators
     
-    def getFourPotentialAtZ(self,rs=np.logspace(-1,2,100),z=0,\
-                            farfield=False,k=None,\
+    def getFourPotentialAtZ(self,rs=np.logspace(-1,2,100),z=0,
+                            farfield=False,k=None,
                             kappa_min=None,kappa_max=None,Nkappas=244,
                              qquadrature=numrec.GL):
         

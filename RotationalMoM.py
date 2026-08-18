@@ -24,7 +24,7 @@ import time
 from numba import njit
 
 
-quadlimit=100
+quadlimit=int(1e3)
 MultiSamples=(-1,+1) #Simpson's rule
 
 def dblquad(func, a, b, gfun, hfun, args=(), epsabs=1.49e-8, epsrel=1.49e-8, limit=50):
