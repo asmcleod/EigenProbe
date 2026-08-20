@@ -8,7 +8,8 @@
 </div>
 
 <p align="center"><i>A practical and precise toolkit for optical scanned probe microscopies: <br>
- s-SNOM, nano-FTIR, nano-IR, and beyond.</i></p>
+ s-SNOM, nano-FTIR, nano-IR, and beyond.</i>
+<br><br>   <b>Version 1.1, released 2026.08.26</b> </p>
 
 <p align="center">
     <img src="./Documentation/EigenProbe_Logo.png" title="" alt="" width="400">
@@ -199,7 +200,7 @@ https://github.com/user-attachments/assets/450f8412-f051-43f9-aafa-3d0de09d1734
 
 ## 4. Getting started 🏁
 
-* The easiest way to obtain `EigenProbe` (for now) is to clone this repository onto your local machine.  `Eigenprobe` is a self-contained all-python package that can be scripted or utilized interactively in a [Jupyter notebook](https://jupyter.org).
+* The easiest way to obtain `EigenProbe` (for now) is to clone this repository onto your local machine.  `Eigenprobe` is a self-contained all-python package that can be scripted or utilized interactively in a [Jupyter notebook](https://jupyter.org).  Download the package, unzip if needed, and save the entire directory with name `EigenProbe` to a location on your [python path](https://docs.python.org/3/library/sys_path_init.html).
 
 * `EigenProbe` has the following most important python package dependencies; the following versions are sufficient to use `EigenProbe` effectively.
 
