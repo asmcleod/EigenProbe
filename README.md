@@ -1,7 +1,11 @@
 <h1 align="center">EigenProbe</h1>
 
+<div align="center">
+ 
 | [![DOI](https://zenodo.org/badge/452058843.svg)](https://doi.org/10.5281/zenodo.21731495) | [![DOI](https://img.shields.io/badge/DOI-110.48550/arXiv.2607.23950-blue)](https://doi.org/10.48550/arXiv.2607.23950) |
 | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+
+</div>
 
 <p align="center"><i>A practical and precise toolkit for optical scanned probe microscopies: <br>
  s-SNOM, nano-FTIR, nano-IR, and beyond.</i></p>
@@ -75,9 +79,11 @@ This example exploits the built-in library of `EigenProbe.Materials` to compute 
 <img title="" src="./Documentation/img/hBN_spectra.png" alt="" width="400">
 </p>
 
-> ***Try it out!***  Use the included jupyter notebook to get started:
+> ***Try it out!***
 > 
-> - <mark>0 - EigenProbe Quick-Start.ipynb</mark>
+> &emsp;Use the included jupyter notebook to get started:
+> 
+>&emsp;[0 - EigenProbe Quick-Start.ipynb](<./Notebooks/0 - EigenProbe Quick-Start.ipynb>)
 
 ## 3. Features ✅
 
@@ -91,30 +97,33 @@ How does a nano-optical probe interact with a material?  A numerical experiment 
 
 * ***Study their interaction:***  Combine the probe and material to predict scattering or nano-focusing of light by the combined, interacting system.
 
-> ***Learn more:*** `EigenProbe` conveniently packages a series of several included <mark>jupyter</mark> <mark>notebooks</mark>, each showcasing one of the features described below. These notebooks include documentation, and serve as brief tutorials: 
+> ***Learn more:*** `EigenProbe` conveniently packages a series of several included [Jupyter notebooks](https://jupyter.org), each showcasing one of the features described below. These notebooks include documentation, and serve as brief tutorials: 
 > 
-> * <mark>EigenProbe Notebooks</mark>
+> * [EigenProbe Notebooks](<./Notebooks/>)
 
 ### 3.1 Build an electromagnetic model of an optical scanned probe 💻
 
 - The important geometric features of an optical scanned probe can span three decades of lengths scales - from the probe's wavelength-scale size (endowing its *antenna* response to light), down to the nanometer-scale of its sharp apex (endowing its nano-imaging resolution).   `EigenProbe` bridges this multi-scale gap by discretizing an `EigenProbe.Probe` with an adaptive **boundary element method**, capturing every fine detail even for custom geometries.
 
-![](/Users/alexandersmcleod/Library/CloudStorage/Dropbox/Git/EigenProbe/Documentation/img/Eigenmode_Fields.jpg)
+<p align="center">
+<img title="" src="./Documentation/img/Eigenmode_Fields.jpg" alt="" width="800">
+</p>
 
-> **Learn more:** `EigenProbe.RotationalMoM` implements an efficient method of moments for bodies of revolution according to the standard text:
+> **Learn more:**
+> `EigenProbe.RotationalMoM` implements an efficient method of moments for bodies of revolution according to the standard text:
 > 
-> - Gibson, W. C. *The Method of Moments in Electromagnetics*; Chapman and Hall/CRC: Boca Raton, FL, 2008. https://doi.org/10.1201/9781420061468.  
+> * Gibson, W. C. *The Method of Moments in Electromagnetics*; Chapman and Hall/CRC: Boca Raton, FL, 2008. https://doi.org/10.1201/9781420061468.  
 
 - Use the method of moments to compute **eigenmodes** $E_\nu$ that are specific to your probe, including their light-confinement and radiance (or "brightness"), all conveniently quantified with eigenvalues $\rho_\nu$.  `EigenProbe.ProbeSpectroscopies` map how these evolve with probe-sample distance or with the energy of light, providing a complete description of the probe.
 
-| ![](/Users/alexandersmcleod/Library/CloudStorage/Dropbox/Git/EigenProbe/Documentation/img/Eigenvalues_vs_gap.png) | <img title="" src="./Documentation/img/Eigenmode_Radiation.png" alt="" width="607"> |
+| <img title="" src="./Documentation/img/Eigenvalues_vs_gap.png" alt="" width="500"> | <img title="" src="./Documentation/img/Eigenmode_Radiation.png" alt="" width="607"> |
 | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 
 > ***Try it out!***  Use the included jupyter notebooks to make your own probe:
-> 
-> - <mark>1 - Probe building and Probe spectroscopies.ipynb</mark>
-> - <mark>5 - Probe eigenmode properties.ipynb </mark> 
-> - <mark>6 - Unconventional probe geometry.ipynb</mark>
+>
+> *[1 - Probe building and Probe spectroscopies.ipynb](<./Notebooks/1 - Probe building and Probe spectroscopies.ipynb>)
+> *[5 - Probe eigenmode properties.ipynb](<./Notebooks/5 - Probe eigenmode properties.ipynb>)
+> *[6 - Unconventional probe geometry.ipynb](<./Notebooks/6 - Unconventional probe geometry.ipynb>)
 
 ### 3.2 Examine the optical response of materials 🔦
 
@@ -125,8 +134,8 @@ How does a nano-optical probe interact with a material?  A numerical experiment 
 * Surfaces respond to light through a reflectivity $\beta$.  In the most interesting cases, their reflectivity depends also on the energy $\omega$ and momentum $q$ of light.  Use the *Fresnel coefficient* $r_p(q,\omega)$ to predict the dispersion of collective modes of light and matter - *polaritons* - which can be sensed by optical scanned probes.  `EigenProbe` deploys a purpose-built transfer matrix method to predict the reflectivity of complex surfaces.
 
 > ***Try it out!***  Use the included jupyter notebook to make your materials, predict their reflection of light, and map the dispersion of polaritons:
-> 
-> - <mark>7 - Using the Materials library.ipynb</mark>
+>
+> -[7 - Using the Materials library.ipynb](<./Notebooks/7 - Using the Materials library.ipynb>)
 
 ### 3.3 Simulate near-field interactions between an optical probe and nearby surfaces ⚡️
 
@@ -138,7 +147,7 @@ $$
 
 * In this simple case, $\beta$ describes the material surface response, $\rho_\nu$ describes the ease of exciting each eigenmode, and $B_\nu$ is the contribution from each eigenmode to the observable.  The *EigenProbe* formalism shows how only a few ($N\approx 10$) eigenmodes suffice for quantitative predictions!  `EigenProbe` automatically handles more complex interactions between probes and surfaces through generalizations of this basic approach.
 
-| ![](/Users/alexandersmcleod/Library/CloudStorage/Dropbox/Git/EigenProbe/Documentation/img/SpectrumSumsEigenmodes.jpg) | <img title="" src="./Documentation/img/Barycentric.jpg" alt="" width="1800"> |
+| <img title="" src="./Documentation/img/SpectrumSumsEigenmodes.jpg" alt="" width="1800"> | <img title="" src="./Documentation/img/Barycentric.jpg" alt="" width="1800"> |
 | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 
 * Examine several different approaches to predict *e.g.* s-SNOM measurements -  many render incredible speedups!  `EigenProbe.ProbeSpectroscopies` allows to predict nano-spectroscopy measurements in a matter of milliseconds.  For different experimental conditions, you can quickly compute rational approximations to analytically relate material properties (like $\beta$) to measurements (like $E_\mathrm{scat}$).
@@ -151,18 +160,18 @@ $$
 > 
 > Use the included jupyter notebooks to simulate probe-surface interactions:
 > 
-> - <mark>2 - Probe Simulation methods comparison and convergence.ipynb</mark>
-> - <mark>4 - Rational approximation of s-SNOM signal.ipynb </mark> 
-> - <mark>6 - Unconventional probe geometry.ipynb</mark>
+> * [2 - Probe Simulation methods comparison and convergence.ipynb](<./Notebooks/2 - Probe Simulation methods comparison and convergence.ipynb>)
+> * [4 - Rational approximation of s-SNOM signal.ipynb](<./Notebooks/4 - Rational approximation of s-SNOM signal.ipynb>)
+> * [6 - Unconventional probe geometry.ipynb](<./Notebooks/6 - Unconventional probe geometry.ipynb>)
 
 ### 3.4 Recover optical properties from nano-imaging and -spectroscopy 📈
 
 * Since `EigenProbe` predicts with great speed and without loss of accuracy, it is the perfect tool to solve the inverse problem of nano-spectroscopy.  `EigenProbe.EigenInversion` provides tools to dynamically fit measured spectra, from weakly interacting (*e.g.* polymers) and strongly interacting (*e.g.* polariton-resonant) materials alike.  Uniqueness is gauranteed through causally (Kramers-Krönig) constrained fitting to recover energy-dependent optical constants like permittivity $\varepsilon(\omega)$, index of refraction $n(\omega)$, or optical conductivity $\sigma(\omega)$ form uniform materials, or even from thin layers atop substrates.
 
-| <img src="./Documentation/Movies/FittingPMMA.gif" title="" alt="" width="1200"> | ![](/Users/alexandersmcleod/Library/CloudStorage/Dropbox/Git/EigenProbe/Documentation/img/PMMA_RecoveredPermittivity.jpg) |
+| <img src="./Documentation/Movies/FittingPMMA.gif" title="" alt="" width="450"> | <img src="./Documentation/img/PMMA_RecoveredPermittivity.jpg" title="" alt="" width="450">  |
 | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 
-| <img src="./Documentation/Movies/FittingSiO2.gif" title="" alt="" width="1700"> | ![](/Users/alexandersmcleod/Library/CloudStorage/Dropbox/Git/EigenProbe/Documentation/img/SiO2_RecoveredPermittivity.jpg) |
+| <img src="./Documentation/Movies/FittingSiO2.gif" title="" alt="" width="450"> | <img src="./Documentation/img/SiO2_RecoveredPermittivity.jpg" title="" alt="" width="450"> |
 | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 
 * Utilize *EigenProbe Inversion* as a **service for real-time recovery of optical constants** from ongoing measurements, including from nano-imaging, even pixel-by-pixel.  A typical recovery loop requires only few milliseconds on a laptop, and future speedups remain to be discovered via offboarded hardware.
@@ -170,19 +179,22 @@ $$
 <p align="center">
    <img title="" src="./Documentation/img/EigenProbe_as_service.jpg" title="" alt="" width="500">
 </p>
+
+* Observe a real-time demonstration of few-millisecond-per-pixel permittivity recover from a running experiment.  Dark patches are low-permittivity silicon and bright patches are high permittivity (at least, at energies close to the optical phonon) of silicon oxide:
 <!-- EigenProbe-as-service_Si-SiO2grating.mp4 -->
 https://github.com/user-attachments/assets/450f8412-f051-43f9-aafa-3d0de09d1734
+
 
 > ***Try it out!***  
 > 
 > Use the included jupyter notebooks to simulate probe-surface interactions:
 > 
-> - <mark>3.3 - Application (s-SNOM) - Inversion of nanoFTIR spectra.ipynb</mark>
-> - <mark>3.4 - Application (s-SNOM) - EigenProbe-as-service.ipynb </mark> 
+> * [3.3 - Application (s-SNOM) - Inversion of nanoFTIR spectra.ipynb](<./Notebooks/3.3 - Application (s-SNOM) - Inversion of nanoFTIR spectra.ipynb>)
+> * [3.4 - Application (s-SNOM) - EigenProbe-as-service.ipynb](<./Notebooks/3.4 - Application (s-SNOM) - EigenProbe-as-service.ipynb>)
 
 ## 4. Getting started 🏁
 
-* The easiest way to obtain `EigenProbe` (for now) is to clone this repository onto your local machine.  `Eigenprobe` is a self-contained all-python package that can be scripted or utilized interactively in a <mark>Jupyter</mark> notebook.
+* The easiest way to obtain `EigenProbe` (for now) is to clone this repository onto your local machine.  `Eigenprobe` is a self-contained all-python package that can be scripted or utilized interactively in a [Jupyter notebook](https://jupyter.org).
 
 * `EigenProbe` has the following python package dependencies; the following versions are sufficient to use `EigenProbe` effectively.
 
@@ -194,7 +206,7 @@ numba:         0.60.0
 sympy:         1.14.0
 ```
 
-* You can install a tailor-made <mark>conda</mark> package for `EigenProbe` that includes all dependences by running the following shell command from within your cloned `Eigenprobe/config/` directory:
+* You can install a tailor-made [conda](https://docs.conda.io/projects/conda/en/stable/index.html) package for `EigenProbe` that includes all dependences by running the following shell command from within your cloned `Eigenprobe/config/` directory:
 
 ```
 conda env create -f EigenProbe.yml # Build a custom environment
@@ -203,7 +215,7 @@ conda activate EigenProbe # Activate the environment
 
 ## 5. Coming soon 🛠️ 🔜
 
-![](/Users/alexandersmcleod/Library/CloudStorage/Dropbox/Git/EigenProbe/Documentation/img/EigenProbeImaging.jpg)
+![](./Documentation/img/EigenProbeImaging.jpg)
 
 * Predict the outcome of nano-imaging experiments in real-space with the `EigenProbe.EigenProbeImaging` package...
 
@@ -213,4 +225,11 @@ conda activate EigenProbe # Activate the environment
 
 # Questions?
 
-* 
+* Contact the `EigenProbe` creator:
+  * Prof. Alexander S. McLeod
+  * [mcleoda@umn.edu](mailto:mcleoda@umn.edu)
+  * *School of Physics & Astronomy*
+  * *University of Minnesota Twin Cities*
+    
+<img title="" src="./Documentation/img/mnop Logo.png" title="" alt="" width="200">
+
