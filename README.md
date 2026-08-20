@@ -179,7 +179,7 @@ $$
 | <img src="./Documentation/Movies/FittingSiO2.gif" title="" alt="" width="450"> | <img src="./Documentation/img/SiO2_RecoveredPermittivity.jpg" title="" alt="" width="450"> |
 | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 
-* Utilize *EigenProbe Inversion* as a **service for real-time recovery of optical constants** from ongoing measurements, including from nano-imaging, even pixel-by-pixel.  A typical recovery loop requires only few milliseconds on a laptop, and future speedups remain to be discovered via offboarded hardware.
+* Utilize *EigenProbe Inversion* as a **service for real-time recovery of optical constants** from ongoing measurements, including from nano-imaging, even pixel-by-pixel. Run `EigenProbe` in a virtual server:  as shown in [this example](<./Notebooks/3.4 - Application (s-SNOM) - EigenProbe-as-service.ipynb>), you can run `EigenProbe` from your own jupyter notebook and dispatch parallel recovery tasks through a queue.  A typical recovery loop requires only few milliseconds on a laptop, and future speedups remain to be discovered via offboard hardware!
 
 <p align="center">
    <img title="" src="./Documentation/img/EigenProbe_as_service.jpg" title="" alt="" width="500">
@@ -201,7 +201,7 @@ https://github.com/user-attachments/assets/450f8412-f051-43f9-aafa-3d0de09d1734
 
 * The easiest way to obtain `EigenProbe` (for now) is to clone this repository onto your local machine.  `Eigenprobe` is a self-contained all-python package that can be scripted or utilized interactively in a [Jupyter notebook](https://jupyter.org).
 
-* `EigenProbe` has the following python package dependencies; the following versions are sufficient to use `EigenProbe` effectively.
+* `EigenProbe` has the following most important python package dependencies; the following versions are sufficient to use `EigenProbe` effectively.
 
 ```
 numpy:         1.26.4
@@ -211,7 +211,7 @@ numba:         0.60.0
 sympy:         1.14.0
 ```
 
-* You can install a tailor-made [conda](https://docs.conda.io/projects/conda/en/stable/index.html) package for `EigenProbe` that includes all dependences by running the following shell command from within your cloned `Eigenprobe/config/` directory:
+* You can install a [conda](https://docs.conda.io/projects/conda/en/stable/index.html) environment tailor-made for `EigenProbe` that includes all its dependences by running the following shell command from within your cloned `Eigenprobe/config/` directory:
 
 ```
 conda env create -f EigenProbe.yml # Build a custom environment
