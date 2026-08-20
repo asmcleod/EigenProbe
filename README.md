@@ -110,7 +110,8 @@ How does a nano-optical probe interact with a material?  A numerical experiment 
 </p>
 
 > **Learn more:**
-> `EigenProbe.RotationalMoM` implements an efficient method of moments for bodies of revolution according to the standard text:
+> 
+> &emsp;`EigenProbe.RotationalMoM` implements an efficient method of moments for bodies of revolution according to the standard text:
 > 
 > * Gibson, W. C. *The Method of Moments in Electromagnetics*; Chapman and Hall/CRC: Boca Raton, FL, 2008. https://doi.org/10.1201/9781420061468.  
 
@@ -119,11 +120,13 @@ How does a nano-optical probe interact with a material?  A numerical experiment 
 | <img title="" src="./Documentation/img/Eigenvalues_vs_gap.png" alt="" width="500"> | <img title="" src="./Documentation/img/Eigenmode_Radiation.png" alt="" width="607"> |
 | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 
-> ***Try it out!***  Use the included jupyter notebooks to make your own probe:
+> ***Try it out!***
 >
-> *[1 - Probe building and Probe spectroscopies.ipynb](<./Notebooks/1 - Probe building and Probe spectroscopies.ipynb>)
-> *[5 - Probe eigenmode properties.ipynb](<./Notebooks/5 - Probe eigenmode properties.ipynb>)
-> *[6 - Unconventional probe geometry.ipynb](<./Notebooks/6 - Unconventional probe geometry.ipynb>)
+> &emsp; Use the included jupyter notebooks to make your own probe:
+>
+> * [1 - Probe building and Probe spectroscopies.ipynb](<./Notebooks/1 - Probe building and Probe spectroscopies.ipynb>)
+> * [5 - Probe eigenmode properties.ipynb](<./Notebooks/5 - Probe eigenmode properties.ipynb>)
+> * [6 - Unconventional probe geometry.ipynb](<./Notebooks/6 - Unconventional probe geometry.ipynb>)
 
 ### 3.2 Examine the optical response of materials 🔦
 
@@ -133,9 +136,11 @@ How does a nano-optical probe interact with a material?  A numerical experiment 
 
 * Surfaces respond to light through a reflectivity $\beta$.  In the most interesting cases, their reflectivity depends also on the energy $\omega$ and momentum $q$ of light.  Use the *Fresnel coefficient* $r_p(q,\omega)$ to predict the dispersion of collective modes of light and matter - *polaritons* - which can be sensed by optical scanned probes.  `EigenProbe` deploys a purpose-built transfer matrix method to predict the reflectivity of complex surfaces.
 
-> ***Try it out!***  Use the included jupyter notebook to make your materials, predict their reflection of light, and map the dispersion of polaritons:
+> ***Try it out!***
 >
-> -[7 - Using the Materials library.ipynb](<./Notebooks/7 - Using the Materials library.ipynb>)
+> &emsp;Use the included jupyter notebook to make your materials, predict their reflection of light, and map the dispersion of polaritons:
+>
+> * [7 - Using the Materials library.ipynb](<./Notebooks/7 - Using the Materials library.ipynb>)
 
 ### 3.3 Simulate near-field interactions between an optical probe and nearby surfaces ⚡️
 
@@ -158,7 +163,7 @@ $$
 
 > ***Try it out!***  
 > 
-> Use the included jupyter notebooks to simulate probe-surface interactions:
+> &emsp;Use the included jupyter notebooks to simulate probe-surface interactions:
 > 
 > * [2 - Probe Simulation methods comparison and convergence.ipynb](<./Notebooks/2 - Probe Simulation methods comparison and convergence.ipynb>)
 > * [4 - Rational approximation of s-SNOM signal.ipynb](<./Notebooks/4 - Rational approximation of s-SNOM signal.ipynb>)
@@ -187,7 +192,7 @@ https://github.com/user-attachments/assets/450f8412-f051-43f9-aafa-3d0de09d1734
 
 > ***Try it out!***  
 > 
-> Use the included jupyter notebooks to simulate probe-surface interactions:
+> &emsp;Use the included jupyter notebooks to simulate probe-surface interactions:
 > 
 > * [3.3 - Application (s-SNOM) - Inversion of nanoFTIR spectra.ipynb](<./Notebooks/3.3 - Application (s-SNOM) - Inversion of nanoFTIR spectra.ipynb>)
 > * [3.4 - Application (s-SNOM) - EigenProbe-as-service.ipynb](<./Notebooks/3.4 - Application (s-SNOM) - EigenProbe-as-service.ipynb>)
