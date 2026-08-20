@@ -173,10 +173,10 @@ $$
 
 * Since `EigenProbe` predicts with great speed and without loss of accuracy, it is the perfect tool to solve the inverse problem of nano-spectroscopy.  `EigenProbe.EigenInversion` provides tools to dynamically fit measured spectra, from weakly interacting (*e.g.* polymers) and strongly interacting (*e.g.* polariton-resonant) materials alike.  Uniqueness is gauranteed through causally (Kramers-Krönig) constrained fitting to recover energy-dependent optical constants like permittivity $\varepsilon(\omega)$, index of refraction $n(\omega)$, or optical conductivity $\sigma(\omega)$ form uniform materials, or even from thin layers atop substrates.
 
-| <img src="./Documentation/Movies/FittingPMMA.gif" title="" alt="" width="450"> | <img src="./Documentation/img/PMMA_RecoveredPermittivity.jpg" title="" alt="" width="450">  |
+| <img src="./Documentation/Movies/FittingPMMA.gif" title="" alt="" width="400"> | <img src="./Documentation/img/PMMA_RecoveredPermittivity.jpg" title="" alt="" width="500">  |
 | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 
-| <img src="./Documentation/Movies/FittingSiO2.gif" title="" alt="" width="450"> | <img src="./Documentation/img/SiO2_RecoveredPermittivity.jpg" title="" alt="" width="450"> |
+| <img src="./Documentation/Movies/FittingSiO2.gif" title="" alt="" width="400"> | <img src="./Documentation/img/SiO2_RecoveredPermittivity.jpg" title="" alt="" width="500"> |
 | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 
 * Utilize *EigenProbe Inversion* as a **service for real-time recovery of optical constants** from ongoing measurements, including from nano-imaging, even pixel-by-pixel. Run `EigenProbe` in a virtual server:  as shown in [this example](<./Notebooks/3.4 - Application (s-SNOM) - EigenProbe-as-service.ipynb>), you can run `EigenProbe` from your own jupyter notebook and dispatch parallel recovery tasks through a queue.  A typical recovery loop requires only few milliseconds on a laptop, and future speedups remain to be discovered via offboard hardware!
@@ -185,7 +185,7 @@ $$
    <img title="" src="./Documentation/img/EigenProbe_as_service.jpg" title="" alt="" width="500">
 </p>
 
-* Observe a real-time demonstration of few-millisecond-per-pixel permittivity recover from a running experiment.  Dark patches are low-permittivity silicon and bright patches are high permittivity (at least, at energies close to the optical phonon) of silicon oxide:
+* Below, observe a real-time demonstration of few-millisecond-per-pixel recovery of a permittivity image from a running experiment.  Dark patches in the recovered image identify low-permittivity silicon, and bright patches identify high-permittivity (at least, at the imaging energy close to an optical phonon of) silicon oxide:
 <!-- EigenProbe-as-service_Si-SiO2grating.mp4 -->
 https://github.com/user-attachments/assets/450f8412-f051-43f9-aafa-3d0de09d1734
 
