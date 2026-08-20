@@ -1245,7 +1245,7 @@ class Probe(object):
         return result
     
     def EradSpectrumDemodulated(self, freqs, gapmin=.1, amplitude=2,
-                                Ngaps=16, zquadrature=numrec.CC,
+                                Ngaps=24, zquadrature=numrec.CC,
                                 Nmodes=20, illum_angles=None,
                                 illum_angle_weights=None,
                                 rp=None, demod_order=4,
@@ -1307,7 +1307,7 @@ class Probe(object):
 
     def getNormalizedSignal(self, freqs_wn, rp,
                             a_nm=30, amplitude_nm=50, demod_order=5,
-                            Ngaps=24*4, gapmin_nm=.15,
+                            Ngaps=24, gapmin_nm=.15,
                             L_cm=24e-4,
                             rp_norm = None,
                             norm_single_freq = True,

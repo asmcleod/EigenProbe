@@ -46,9 +46,16 @@ dependencies:
   - debugpy=1.8.16=py39h6581403_0
   - decorator=5.2.1=pyhd8ed1ab_0
   - defusedxml=0.7.1=pyhd8ed1ab_0
+  - dill=0.4.0=pyhd8ed1ab_0
   - eigen=3.4.0=h2fb4741_2
   - exceptiongroup=1.3.0=pyhd8ed1ab_0
   - executing=2.2.0=pyhd8ed1ab_0
+  - fenics-dijitso=2019.1.0=pyhd8ed1ab_39
+  - fenics-dolfin=2019.1.0=py39h74a4bc9_49
+  - fenics-ffc=2019.1.0=pyhd8ed1ab_40
+  - fenics-fiat=2019.1.0=pyhd8ed1ab_40
+  - fenics-libdolfin=2019.1.0=h2d8a88e_49
+  - fenics-ufl=2019.1.0=py39h6e9494a_38
   - fftw=3.3.10=mpi_mpich_hfa5bf39_11
   - fonttools=4.55.3=py39h46256e1_0
   - fqdn=1.5.1=pyhd8ed1ab_1
@@ -69,6 +76,7 @@ dependencies:
   - importlib-resources=6.4.0=pyhd8ed1ab_0
   - importlib_resources=6.4.0=py39hecd8cb5_0
   - ipykernel=6.30.1=pyh92f572d_0
+  - ipympl=0.9.7=pyhd8ed1ab_1
   - ipython=8.18.1=pyh707e725_3
   - ipywidgets=8.1.7=pyhd8ed1ab_0
   - isoduration=20.11.0=pyhd8ed1ab_1
@@ -166,11 +174,11 @@ dependencies:
   - llvm-openmp=22.1.8=h0d3cbff_0
   - llvm-tools=17.0.6=hbedff68_1
   - llvm-tools-19=19.1.7=he90a8e3_1
-  - llvmlite=0.39.1=py39had167e2_1
+  - llvmlite=0.43.0=py39h164c851_1
   - lz4-c=1.9.4=hcec6c5f_1
   - markupsafe=3.0.2=py39hd18e689_1
-  - matplotlib=3.7.1=py39h6e9494a_0
-  - matplotlib-base=3.7.1=py39hb2f573b_0
+  - matplotlib=3.9.4=py39h6e9494a_0
+  - matplotlib-base=3.9.4=py39hda06d36_0
   - matplotlib-inline=0.1.7=pyhd8ed1ab_1
   - metis=5.1.0=he965462_1007
   - mistune=3.1.3=pyh29332c3_0
@@ -184,6 +192,7 @@ dependencies:
   - mpich=4.3.2=h7ea6e94_101
   - mpmath=1.3.0=pyhd8ed1ab_1
   - mshr=2019.1.0=py39h854940c_10
+  - multiprocess=0.70.18=py39h80efdc8_0
   - mumps-include=5.7.3=h694c41f_4
   - mumps-mpi=5.7.3=h0669c1d_4
   - nbclient=0.10.4=pyhd8ed1ab_0
@@ -193,8 +202,8 @@ dependencies:
   - nest-asyncio=1.6.0=pyhd8ed1ab_1
   - notebook=7.4.5=pyhd8ed1ab_0
   - notebook-shim=0.2.4=pyhd8ed1ab_1
-  - numba=0.56.4=py39hf6b9d82_0
-  - numpy=1.23.5=py39hdfa1d0c_0
+  - numba=0.60.0=py39h90d9702_0
+  - numpy=1.26.4=py39h28c39a1_0
   - openjpeg=2.5.0=h13ac156_2
   - openssl=3.6.3=hc881268_1
   - opt_einsum=3.4.0=pyhd8ed1ab_1
@@ -236,6 +245,7 @@ dependencies:
   - pytz=2025.2=pyhd8ed1ab_0
   - pyyaml=6.0.2=py39hd18e689_2
   - pyzmq=26.2.0=py39ha6bd863_0
+  - qhull=2020.2=h3c5361c_5
   - readline=8.3=h68b038d_0
   - referencing=0.36.2=pyh29332c3_0
   - requests=2.32.5=pyhd8ed1ab_0
