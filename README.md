@@ -8,7 +8,8 @@
 </div>
 
 <p align="center"><i>A practical and precise toolkit for optical scanned probe microscopies: <br>
- s-SNOM, nano-FTIR, nano-IR, and beyond.</i></p>
+ s-SNOM, nano-FTIR, nano-IR, and beyond.</i>
+<br><br>   <b>Version 1.1, released 2026.08.26</b> </p>
 
 <p align="center">
     <img src="./Documentation/EigenProbe_Logo.png" title="" alt="" width="400">
