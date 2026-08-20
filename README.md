@@ -132,7 +132,7 @@ How does a nano-optical probe interact with a material?  A numerical experiment 
 
 * Build a custom insulator, semiconductor, or ionic insulator with `EigenProbe.Materials`, or choose any of these from an included library of materials that including monolayer graphene, polymers, and beyond.  To describe thin films or layered media, combine these into a custom heterostructure!
   
-  ![](/Users/alexandersmcleod/Library/CloudStorage/Dropbox/Git/EigenProbe/Documentation/img/TransferMatrix.png)
+  ![](./Documentation/img/TransferMatrix.png)
 
 * Surfaces respond to light through a reflectivity $\beta$.  In the most interesting cases, their reflectivity depends also on the energy $\omega$ and momentum $q$ of light.  Use the *Fresnel coefficient* $r_p(q,\omega)$ to predict the dispersion of collective modes of light and matter - *polaritons* - which can be sensed by optical scanned probes.  `EigenProbe` deploys a purpose-built transfer matrix method to predict the reflectivity of complex surfaces.
 
@@ -157,7 +157,7 @@ $$
 
 * Examine several different approaches to predict *e.g.* s-SNOM measurements -  many render incredible speedups!  `EigenProbe.ProbeSpectroscopies` allows to predict nano-spectroscopy measurements in a matter of milliseconds.  For different experimental conditions, you can quickly compute rational approximations to analytically relate material properties (like $\beta$) to measurements (like $E_\mathrm{scat}$).
 
-![](/Users/alexandersmcleod/Library/CloudStorage/Dropbox/Git/EigenProbe/Documentation/img/UnconventionalProbe_doube.jpg)
+![](./Documentation/img/UnconventionalProbe_doube.jpg)
 
 * Unconventional probe geometries can favorably enhance probe-surface interactions. Build several probes and compare how they interact differently with materials of interest.  
 
