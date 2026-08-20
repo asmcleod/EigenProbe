@@ -14,20 +14,20 @@
     <img src="./Documentation/EigenProbe_Logo.png" title="" alt="" width="400">
 </p>
 
-* [1. Introduction ♟️](#1-introduction)
+* [1. Introduction ♟️](#1-introduction-%EF%B8%8F)
 
-* [2. Quick start 🚀](#2-quick-start)
+* [2. Quick start 🚀](#2-quick-start-)
 
-* [3. Features ✅](#3-features)
+* [3. Features ✅](#3-features-)
   
-  * [3.1 Build an electromagnetic model of an optical scanned probe 💻](#31-build-an-electromagnetic-model-of-an-optical-scanned-probe)
-  * [3.2 Examine the optical response of materials 🔦](#32-examine-the-optical-response-of-materials)
-  * [3.3 Simulate near-field interactions between an optical probe and nearby surfaces ⚡️](#33-simulate-near-field-interactions-between-an-optical-probe-and-nearby-surface)
-  * [3.4 Recover optical properties from nano-imaging and -spectroscopy 📈](#34-recover-optical-properties-from-nano-imaging-and--spectroscopy)
+  * [3.1 Build an electromagnetic model of an optical scanned probe 💻](#31-build-an-electromagnetic-model-of-an-optical-scanned-probe-)
+  * [3.2 Examine the optical response of materials 🔦](#32-examine-the-optical-response-of-materials-)
+  * [3.3 Simulate near-field interactions between an optical probe and nearby surfaces ⚡️](#33-simulate-near-field-interactions-between-an-optical-probe-and-nearby-surfaces-%EF%B8%8F)
+  * [3.4 Recover optical properties from nano-imaging and -spectroscopy 📈](#34-recover-optical-properties-from-nano-imaging-and--spectroscopy-)
 
-* [4. Getting started 🏁](#4-getting-started)
+* [4. Getting started 🏁](#4-getting-started-)
 
-* [5. Coming soon 🛠️ 🔜](#5-coming-soon)
+* [5. Coming soon 🛠️ 🔜](#5-coming-soon-%EF%B8%8F-)
 
 * [6. Questions?](#6-questions)
   
@@ -223,7 +223,7 @@ conda activate EigenProbe # Activate the environment
 
 * Automatic installation of `EigenProbe` distributions through the `conda-forge` repository (*e.g.* `conda install EigenProbe`)...
 
-# Questions?
+# 6. Questions?
 
 * Contact the `EigenProbe` creator:
   * Prof. Alexander S. McLeod
