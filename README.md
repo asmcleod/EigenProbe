@@ -9,7 +9,7 @@
 
 <p align="center"><i>A practical and precise toolkit for optical scanned probe microscopies: <br>
  s-SNOM, nano-FTIR, nano-IR, and beyond.</i>
-<br><br>   <b>Version 1.1, released 2026.08.26</b> </p>
+<br><br>   <b>Version 1.1, released 2026.08.20</b> </p>
 
 <p align="center">
     <img src="./Documentation/EigenProbe_Logo.png" title="" alt="" width="400">
@@ -31,6 +31,8 @@
 * [5. Coming soon 🛠️ 🔜](#5-coming-soon-%EF%B8%8F-)
 
 * [6. Questions?](#6-questions)
+
+* [7. License](#7-license)
   
   ---
 
@@ -238,4 +240,8 @@ conda activate EigenProbe # Activate the environment
   * *University of Minnesota Twin Cities*
     
 <img title="" src="./Documentation/img/mnop Logo.png" title="" alt="" width="200">
+
+# 7. License
+
+This project is licensed under the terms of the Apache License 2.0.  Anyone can use, modify, and distribute this software for any purpose, including commercial use, without paying royalties, provided that distributions include proper attribution, clear notice of changes, and reproduction of the original license.  The full license agreement can be found [here](./LICENSE-2.0.txt).
 
