@@ -74,7 +74,7 @@ class EncodedEigenfieldsPredictor(EP.SlenderizeSerialization):
 
         return arg.real + 1j * np.abs(arg.imag)
 
-    def compute_signal(self, qp, eps):  # This simulates a 2D material
+    def compute_signal(self, qp, eps,**kwargs):  # This simulates a 2D material
 
         if qp is None:
             global qp_vacuum
@@ -89,7 +89,7 @@ class EncodedEigenfieldsPredictor(EP.SlenderizeSerialization):
 
         # Compute scattered field at gap heights; output raw array
         erad_vs_gap = self.EncodedEigenfields.EradVsGap(self.at_gaps, freq=self.freq,
-                                                        RMat0=R0, as_AWA=False, Nmodes=self.Nmodes)
+                                                        RMat0=R0, as_AWA=False, Nmodes=self.Nmodes,**kwargs)
 
         # here is the demodulation! at quadrature nodes
         erad_vs_gap = np.array(erad_vs_gap)
@@ -102,9 +102,9 @@ class EncodedEigenfieldsPredictor(EP.SlenderizeSerialization):
         S = self.compute_signal(qp_ref, eps_ref)
         self.S_ref = S  # Signal value to which we pretend data were referenced
 
-    def compute_norm_signal(self, qp, eps):
+    def compute_norm_signal(self, qp, eps,**kwargs):
 
-        S = self.compute_signal(qp, eps)
+        S = self.compute_signal(qp, eps,**kwargs)
 
         return S / self.S_ref
 
@@ -335,13 +335,14 @@ class LayeredMediaEncodedEigenfieldsPredictor(EP.SlenderizeSerialization):
         self.mat_subs.eps_infinity = self.eps
         self.mat_film.eps_infinity = self.eps_thin_film
 
-    def compute_signal(self, qp, eps):  # This simulates a 2D material
+    def compute_signal(self, qp, eps,**kwargs):  # This simulates a 2D material
 
         self.set_materials(qp, eps)
 
         self.erad_vs_gap = self.EncodedEigenfields.EradVsGap(self.at_gaps, freq=self.freq, RMat0=None,
                                                              Nmodes=self.Nmodes, rp=self.wrapped_rp,
-                                                             record_rp_vals=False, as_AWA=False, interpolation='linear')
+                                                             record_rp_vals=False, as_AWA=False, interpolation='linear',
+                                                             **kwargs)
 
         # here is the demodulation! at quadrature nodes
         self.erad_vs_gap = np.array(self.erad_vs_gap)
@@ -349,14 +350,14 @@ class LayeredMediaEncodedEigenfieldsPredictor(EP.SlenderizeSerialization):
 
         return complex(Sn)
 
-    def set_Sref(self, qp_ref, eps_ref):
+    def set_Sref(self, qp_ref, eps_ref,**kwargs):
 
-        S = self.compute_signal(qp_ref, eps_ref)
+        S = self.compute_signal(qp_ref, eps_ref,**kwargs)
         self.S_ref = S  # Signal value to which we pretend data were referenced
 
-    def compute_norm_signal(self, qp, eps):
+    def compute_norm_signal(self, qp, eps,**kwargs):
 
-        S = self.compute_signal(qp, eps)
+        S = self.compute_signal(qp, eps,**kwargs)
 
         return S / self.S_ref
 
@@ -686,7 +687,7 @@ class VariationalMaterial2D(EP.SlenderizeSerialization):
         certainty[~np.isfinite(certainty)]=1
 
         if weights is None: weights=1
-        Rs = np.abs(S_preds - S_targets) ** exp * certainty * weights
+        Rs = (np.abs(S_preds - S_targets) * certainty) ** exp * weights
 
         self.R = np.sum(Rs)  # Store a metric for us to inspect later
         if self.print_residual: print(self.R)

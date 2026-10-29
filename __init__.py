@@ -254,10 +254,10 @@ def wrap_rp(rp,freq_to_wn,q_to_wn):
 
 class Probe(object):
 
-    defaults = {'freq': 30e-7 / 10e-4,
+    defaults = {'freq': 30e-7 / 10e-4, # the reciprocal of (10 microns wavelength in units of probe radius)
                      'a': 1,
                      'gap': 1,
-                     'L': 19e-4 / 30e-7,
+                     'L': 19e-4 / 30e-7, # 19 microns in units of probe radius
                      'illum_angles': np.linspace(45, 90, 20),
                      'excitation': EPlaneWaveFF}
 
@@ -470,6 +470,15 @@ class Probe(object):
         plt.ylabel('Z')
         plt.title(self.get_name())
 
+    def get_default_excitation(self):
+
+        Exc = self.defaults['excitation']
+        k = self.get_k()
+        angle = np.mean(self.defaults['illum_angles'])
+        excitation = Exc(angle=angle, k=k)
+
+        return excitation
+
     #--- Momentum space propagators & reflectance
 
     def getFourPotentialPropagators(self,k=None,farfield=False,
@@ -632,6 +641,7 @@ class Probe(object):
             Zmirror = Zmirror + \
                      -MAr.T @ (mirror_sign * rpP * MAr) \
                         - MAz.T @ (rpP * MAz)
+            # So, we have (-,+,-)
 
         return Zmirror
         
@@ -694,8 +704,10 @@ class Probe(object):
         
         return complex(N2)
     
-    def get_field_overlap(self, Q, excitation, Vt=None, **kwargs):
+    def get_field_overlap(self, Q, excitation=None, Vt=None, **kwargs):
         """If Q is more than one charge vector, provide them as row vectors."""
+
+        if excitation is None: excitation = self.get_default_excitation()
 
         if Vt is None: Vt,Vphi = self.MethodOfMoments.get_excitation(excitation,**kwargs)
         # otherwise assume V is a vector
@@ -953,7 +965,9 @@ class Probe(object):
     
     def get_eigenexcitations(self,Exc=None,Vt=None,\
                              recompute=False):
-        
+
+        if self.get_eigencharges() is None: self.solve_eigenmodes(plot=False)
+
         if recompute or self._eigenexcitations is None:
             
             Vns=[self.get_field_overlap(Q, Exc, Vt=Vt)
@@ -1060,6 +1074,8 @@ class Probe(object):
                                      as_vector=False,\
                                      **kwargs):
 
+        if excitation is None: excitation = self.get_default_excitation()
+
         if Vt is None: Vt,Vphi = self.MethodOfMoments.get_excitation(excitation)
 
         Z = self.get_impedance_matrix(rho=rho,**kwargs)
@@ -1074,9 +1090,12 @@ class Probe(object):
 
         return Q
     
-    def solve_induced_charge_eigen(self,excitation=None,\
-                                     Vt=None,rho=0,\
+    def solve_induced_charge_eigen(self,excitation=None,
+                                     Vt=None,rho=0,
                                      Nmodes=20,Veff=True):
+
+
+        if excitation is None: excitation = self.get_default_excitation()
 
         if Veff:
             Q0 = self.solve_induced_charge_direct(excitation, Vt=Vt, rho=0)
